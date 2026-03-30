@@ -6,44 +6,57 @@ let subItemIdCounter = 1;
 // GAS Web App URL - 請替換成你部署後的 URL
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwiYYWgKxmLRAEaE_pbp_kWyAzlRPcwYVQfvmJVamRJvosvt5wTTkvwebbFBkP8rMqX/exec';
 
+// 初始化
 document.addEventListener('DOMContentLoaded', function() {
     loadFromLocalStorage();
     renderEvents();
 });
 
+// 新增單一對話框的專屬邏輯
 function addEvent() {
     document.getElementById('singleEventModal').classList.remove('hidden');
+    // 開啟時預設帶入今天日期，並清空其他欄位
     document.getElementById('singleDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('singleName').value = '';
-    document.getElementById('singleCategory').value = '台語/聯合';
+    document.getElementById('singleCategory').value = '台華語聚會';
 }
 
+// 關閉單一新增對話框
 function closeSingleEventModal() {
     document.getElementById('singleEventModal').classList.add('hidden');
 }
 
+// 確認單一新增
 function confirmSingleEventAdd() {
     const dateStr = document.getElementById('singleDate').value;
     const name = document.getElementById('singleName').value.trim();
     const category = document.getElementById('singleCategory').value;
 
-    if (!dateStr) return alert('請選擇日期');
+    if (!dateStr) {
+        alert('請選擇日期');
+        return;
+    }
 
-    events.push({
+    const event = {
         id: eventIdCounter++,
         date: dateStr,
         name: name,
         category: category,
         subItems: [],
         showSub: false
-    });
+    };
     
+    events.push(event);
+    
+    // 新增後自動依日期排序
     events.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
     renderEvents();
     saveToLocalStorage();
     closeSingleEventModal();
 }
 
+// 刪除聚會
 function deleteEvent(eventId) {
     if (confirm('確定要刪除此聚會嗎？')) {
         events = events.filter(e => e.id !== eventId);
@@ -52,16 +65,16 @@ function deleteEvent(eventId) {
     }
 }
 
+// 更新聚會資料
 function updateEvent(eventId, field, value) {
     const event = events.find(e => e.id === eventId);
     if (event) {
         event[field] = value;
         saveToLocalStorage();
-        // 如果切換了聚會類別，重新渲染以更新對應的欄位顯示
-        if (field === 'category') renderEvents(); 
     }
 }
 
+// 切換子項目顯示
 function toggleSubItems(eventId) {
     const event = events.find(e => e.id === eventId);
     if (event) {
@@ -70,14 +83,21 @@ function toggleSubItems(eventId) {
     }
 }
 
+// 新增子項目
 function addSubItem(eventId) {
     const event = events.find(e => e.id === eventId);
     if (event) {
         event.subItems.push({
             id: subItemIdCounter++,
             date: new Date().toISOString().split('T')[0],
-            item: '', title: '', speaker: '', scripture: '',
-            callToWorship: '', goldenVerse: '', hymns: '', description: ''
+            item: '',
+            title: '',
+            speaker: '',
+            scripture: '',
+            callToWorship: '',
+            goldenVerse: '',
+            hymns: '',
+            description: ''
         });
         event.showSub = true;
         renderEvents();
@@ -85,6 +105,7 @@ function addSubItem(eventId) {
     }
 }
 
+// 刪除子項目
 function deleteSubItem(eventId, subId) {
     const event = events.find(e => e.id === eventId);
     if (event) {
@@ -94,6 +115,7 @@ function deleteSubItem(eventId, subId) {
     }
 }
 
+// 更新子項目
 function updateSubItem(eventId, subId, field, value) {
     const event = events.find(e => e.id === eventId);
     if (event) {
@@ -101,6 +123,10 @@ function updateSubItem(eventId, subId, field, value) {
         if (subItem) {
             subItem[field] = value;
             saveToLocalStorage();
+            // 如果更改的是事工名稱且包含「華語」，重新渲染以更新對應的欄位隱藏狀態
+            if (field === 'item') {
+                renderEvents();
+            }
         }
     }
 }
@@ -116,10 +142,6 @@ function renderEvents() {
     }
 
     events.forEach(event => {
-        // 判斷是否為華語，用來隱藏不必要的欄位
-        const isMandarin = event.category === '華語';
-        const hideStyle = isMandarin ? 'display: none;' : '';
-
         const card = document.createElement('div');
         card.className = 'event-card';
         card.innerHTML = `
@@ -137,8 +159,8 @@ function renderEvents() {
                 <div class="input-group">
                     <label>聚會類別</label>
                     <select onchange="updateEvent(${event.id}, 'category', this.value)">
-                        <option value="台語/聯合" ${event.category === '台語/聯合' ? 'selected' : ''}>台語/聯合</option>
-                        <option value="華語" ${event.category === '華語' ? 'selected' : ''}>華語</option>
+                        <option ${event.category === '台華語聚會' ? 'selected' : ''}>台華語聚會</option>
+                        <option ${event.category === '聯合聚會' ? 'selected' : ''}>聯合聚會</option>
                     </select>
                 </div>
                 <button class="btn btn-danger btn-small" onclick="deleteEvent(${event.id})">刪除</button>
@@ -151,7 +173,12 @@ function renderEvents() {
             <div class="sub-items ${event.showSub ? '' : 'hidden'}">
                 <button class="btn btn-primary btn-small" onclick="addSubItem(${event.id})" 
                         style="margin-bottom: 15px;">➕ 新增事工/講道</button>
-                ${event.subItems.map(sub => `
+                ${event.subItems.map(sub => {
+                    // 根據【細項的事工項目】名稱是否包含「華語」來決定隱藏欄位
+                    const isMandarin = sub.item.includes('華語');
+                    const hideStyle = isMandarin ? 'display: none;' : '';
+                    
+                    return `
                     <div class="sub-item">
                         <div style="display: flex; gap: 15px; align-items: flex-end; margin-bottom: 10px;">
                             <div class="input-group" style="flex: 1;">
@@ -160,8 +187,9 @@ function renderEvents() {
                                        onchange="updateSubItem(${event.id}, ${sub.id}, 'date', this.value)">
                             </div>
                             <div class="input-group" style="flex: 2;">
-                                <label>事工項目 (如: 信息分享)</label>
-                                <input type="text" placeholder="例: 信息分享" value="${sub.item}"
+                                <label>事工項目 (如: 信息分享(華語))</label>
+                                <input type="text" placeholder="例: 信息分享(華語)"
+                                       value="${sub.item}"
                                        onchange="updateSubItem(${event.id}, ${sub.id}, 'item', this.value)">
                             </div>
                             <button class="btn btn-danger btn-small" style="height: 38px;"
@@ -169,12 +197,30 @@ function renderEvents() {
                         </div>
                         
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; padding: 10px; background: #f8fafc; border-radius: 6px; border: 1px dashed #cbd5e0;">
-                            <div class="input-group"><label>講題</label><input type="text" value="${sub.title || ''}" onchange="updateSubItem(${event.id}, ${sub.id}, 'title', this.value)"></div>
-                            <div class="input-group"><label>講員</label><input type="text" value="${sub.speaker || ''}" onchange="updateSubItem(${event.id}, ${sub.id}, 'speaker', this.value)"></div>
-                            <div class="input-group"><label>經文</label><input type="text" value="${sub.scripture || ''}" onchange="updateSubItem(${event.id}, ${sub.id}, 'scripture', this.value)"></div>
-                            <div class="input-group"><label>宣召</label><input type="text" value="${sub.callToWorship || ''}" onchange="updateSubItem(${event.id}, ${sub.id}, 'callToWorship', this.value)"></div>
-                            <div class="input-group" style="${hideStyle}"><label>金句</label><input type="text" value="${sub.goldenVerse || ''}" onchange="updateSubItem(${event.id}, ${sub.id}, 'goldenVerse', this.value)"></div>
-                            <div class="input-group" style="${hideStyle}"><label>詩歌/聖詩</label><input type="text" value="${sub.hymns || ''}" onchange="updateSubItem(${event.id}, ${sub.id}, 'hymns', this.value)"></div>
+                            <div class="input-group">
+                                <label>講題</label>
+                                <input type="text" value="${sub.title || ''}" onchange="updateSubItem(${event.id}, ${sub.id}, 'title', this.value)">
+                            </div>
+                            <div class="input-group">
+                                <label>講員</label>
+                                <input type="text" value="${sub.speaker || ''}" onchange="updateSubItem(${event.id}, ${sub.id}, 'speaker', this.value)">
+                            </div>
+                            <div class="input-group">
+                                <label>經文</label>
+                                <input type="text" value="${sub.scripture || ''}" onchange="updateSubItem(${event.id}, ${sub.id}, 'scripture', this.value)">
+                            </div>
+                            <div class="input-group">
+                                <label>宣召</label>
+                                <input type="text" value="${sub.callToWorship || ''}" onchange="updateSubItem(${event.id}, ${sub.id}, 'callToWorship', this.value)">
+                            </div>
+                            <div class="input-group" style="${hideStyle}">
+                                <label>金句</label>
+                                <input type="text" value="${sub.goldenVerse || ''}" onchange="updateSubItem(${event.id}, ${sub.id}, 'goldenVerse', this.value)">
+                            </div>
+                            <div class="input-group" style="${hideStyle}">
+                                <label>詩歌/聖詩</label>
+                                <input type="text" value="${sub.hymns || ''}" onchange="updateSubItem(${event.id}, ${sub.id}, 'hymns', this.value)">
+                            </div>
                         </div>
 
                         <div class="input-group" style="margin-top: 10px;">
@@ -183,13 +229,14 @@ function renderEvents() {
                                       onchange="updateSubItem(${event.id}, ${sub.id}, 'description', this.value)">${sub.description || ''}</textarea>
                         </div>
                     </div>
-                `).join('')}
+                `}).join('')}
             </div>
         `;
         container.appendChild(card);
     });
 }
 
+// 本地儲存
 function saveToLocalStorage() {
     localStorage.setItem('churchEvents', JSON.stringify(events));
 }
@@ -204,8 +251,12 @@ function loadFromLocalStorage() {
     }
 }
 
+// 匯出 Excel
 function exportToExcel() {
-    if (events.length === 0) return alert('沒有資料可以匯出');
+    if (events.length === 0) {
+        alert('沒有資料可以匯出');
+        return;
+    }
 
     let csv = '\uFEFF';
     csv += '日期,聚會名稱,聚會類別,細項日期,事工項目,講題,講員,經文,宣召,金句,詩歌,備註\n';
@@ -231,31 +282,57 @@ function exportToExcel() {
     document.body.removeChild(link);
 }
 
-// 儲存與載入 GAS 邏輯
+// 儲存到 GAS
 async function saveToGAS() {
-    if (!GAS_URL || GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') return alert('請先設定 GAS_URL');
+    if (!GAS_URL || GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
+        alert('請先設定 GAS_URL');
+        return;
+    }
+
     const saveBtn = document.querySelector('button[onclick="saveToGAS()"]');
     const originalText = saveBtn.innerHTML;
-    saveBtn.innerHTML = '⏳ 儲存中...'; saveBtn.disabled = true; saveBtn.style.opacity = '0.7';
+    saveBtn.innerHTML = '⏳ 儲存中...';
+    saveBtn.disabled = true;
+    saveBtn.style.opacity = '0.7';
+    saveBtn.style.cursor = 'not-allowed';
 
     try {
-        await fetch(GAS_URL, {
-            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'save', data: events })
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'save',
+                data: events
+            })
         });
         alert('資料已儲存到雲端！');
     } catch (error) {
+        console.error('儲存失敗:', error);
         alert('儲存失敗，請檢查網路連線');
     } finally {
-        saveBtn.innerHTML = originalText; saveBtn.disabled = false; saveBtn.style.opacity = '1';
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+        saveBtn.style.opacity = '1';
+        saveBtn.style.cursor = 'pointer';
     }
 }
 
+// 從 GAS 載入
 async function loadFromGAS() {
-    if (!GAS_URL || GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') return alert('請先設定 GAS_URL');
+    if (!GAS_URL || GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
+        alert('請先設定 GAS_URL');
+        return;
+    }
+
     const loadBtn = document.querySelector('button[onclick="loadFromGAS()"]');
     const originalText = loadBtn.innerHTML;
-    loadBtn.innerHTML = '⏳ 載入中...'; loadBtn.disabled = true; loadBtn.style.opacity = '0.7';
+    loadBtn.innerHTML = '⏳ 載入中...';
+    loadBtn.disabled = true;
+    loadBtn.style.opacity = '0.7';
+    loadBtn.style.cursor = 'not-allowed';
 
     try {
         const response = await fetch(`${GAS_URL}?action=load`);
@@ -265,12 +342,18 @@ async function loadFromGAS() {
             eventIdCounter = Math.max(...events.map(e => e.id), 0) + 1;
             const allSubIds = events.flatMap(e => e.subItems.map(s => s.id));
             subItemIdCounter = Math.max(...allSubIds, 0) + 1;
-            renderEvents(); saveToLocalStorage(); alert('資料已從雲端載入！');
+            renderEvents();
+            saveToLocalStorage();
+            alert('資料已從雲端載入！');
         }
     } catch (error) {
+        console.error('載入失敗:', error);
         alert('載入失敗，請檢查網路連線');
     } finally {
-        loadBtn.innerHTML = originalText; loadBtn.disabled = false; loadBtn.style.opacity = '1';
+        loadBtn.innerHTML = originalText;
+        loadBtn.disabled = false;
+        loadBtn.style.opacity = '1';
+        loadBtn.style.cursor = 'pointer';
     }
 }
 
@@ -283,73 +366,124 @@ function openBatchModal() {
     document.getElementById('batchStartDate').value = '';
     document.getElementById('batchEndDate').value = '';
     document.getElementById('batchName').value = '';
-    document.getElementById('batchCategory').value = '台語/聯合';
-    selectedWeekdays.clear(); previewDates = [];
-    document.querySelectorAll('.weekday-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('batchCategory').value = '台華語聚會';
+    selectedWeekdays.clear();
+    previewDates = [];
+    
+    document.querySelectorAll('.weekday-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
     document.getElementById('datePreview').innerHTML = '請選擇日期區間和星期';
     document.getElementById('datePreview').classList.remove('has-dates');
 }
 
-function closeBatchModal() { document.getElementById('batchModal').classList.add('hidden'); }
+function closeBatchModal() {
+    document.getElementById('batchModal').classList.add('hidden');
+}
 
 function toggleWeekday(day) {
-    if (selectedWeekdays.has(day)) selectedWeekdays.delete(day);
-    else selectedWeekdays.add(day);
-    document.querySelector(`.weekday-btn[data-day="${day}"]`).classList.toggle('active');
+    if (selectedWeekdays.has(day)) {
+        selectedWeekdays.delete(day);
+    } else {
+        selectedWeekdays.add(day);
+    }
+    
+    const btn = document.querySelector(`.weekday-btn[data-day="${day}"]`);
+    btn.classList.toggle('active');
 }
 
 function previewBatchDates() {
     const startDate = document.getElementById('batchStartDate').value;
     const endDate = document.getElementById('batchEndDate').value;
-    if (!startDate || !endDate) return alert('請選擇開始和結束日期');
-    if (selectedWeekdays.size === 0) return alert('請至少選擇一個星期');
     
-    const start = new Date(startDate); const end = new Date(endDate);
-    if (start > end) return alert('開始日期不能晚於結束日期');
+    if (!startDate || !endDate) {
+        alert('請選擇開始和結束日期');
+        return;
+    }
     
-    previewDates = []; const current = new Date(start);
+    if (selectedWeekdays.size === 0) {
+        alert('請至少選擇一個星期');
+        return;
+    }
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    if (start > end) {
+        alert('開始日期不能晚於結束日期');
+        return;
+    }
+    
+    previewDates = [];
+    const current = new Date(start);
+    
     while (current <= end) {
-        if (selectedWeekdays.has(current.getDay())) previewDates.push(new Date(current));
+        const dayOfWeek = current.getDay();
+        if (selectedWeekdays.has(dayOfWeek)) {
+            previewDates.push(new Date(current));
+        }
         current.setDate(current.getDate() + 1);
     }
     
     const previewDiv = document.getElementById('datePreview');
     if (previewDates.length === 0) {
-        previewDiv.innerHTML = '沒有符合條件的日期'; previewDiv.classList.remove('has-dates');
+        previewDiv.innerHTML = '在選定的日期區間內，沒有符合條件的日期';
+        previewDiv.classList.remove('has-dates');
     } else {
         const weekdayNames = ['日', '一', '二', '三', '四', '五', '六'];
         let html = `<div class="preview-count">共 ${previewDates.length} 個日期</div>`;
+        
         previewDates.forEach(date => {
-            html += `<span class="preview-date-item">${date.toISOString().split('T')[0]} (${weekdayNames[date.getDay()]})</span>`;
+            const dateStr = date.toISOString().split('T')[0];
+            const dayName = weekdayNames[date.getDay()];
+            html += `<span class="preview-date-item">${dateStr} (${dayName})</span>`;
         });
-        previewDiv.innerHTML = html; previewDiv.classList.add('has-dates');
+        
+        previewDiv.innerHTML = html;
+        previewDiv.classList.add('has-dates');
     }
 }
 
 function confirmBatchAdd() {
     const name = document.getElementById('batchName').value.trim();
     const category = document.getElementById('batchCategory').value;
-    if (previewDates.length === 0) return alert('請先預覽日期');
+    
+    if (previewDates.length === 0) {
+        alert('請先預覽日期，確認有可新增的日期');
+        return;
+    }
     
     let addedCount = 0;
     previewDates.forEach(date => {
         const dateStr = date.toISOString().split('T')[0];
         const exists = events.some(e => e.date === dateStr && e.name === name);
+        
         if (!exists) {
-            events.push({ id: eventIdCounter++, date: dateStr, name: name, category: category, subItems: [], showSub: false });
+            events.push({
+                id: eventIdCounter++,
+                date: dateStr,
+                name: name,
+                category: category,
+                subItems: [],
+                showSub: false
+            });
             addedCount++;
         }
     });
     
     events.sort((a, b) => new Date(a.date) - new Date(b.date));
-    renderEvents(); saveToLocalStorage(); closeBatchModal();
-    alert(`成功新增 ${addedCount} 個聚會！`);
+    renderEvents();
+    saveToLocalStorage();
+    closeBatchModal();
+    
+    alert(`成功新增 ${addedCount} 個聚會！${previewDates.length - addedCount > 0 ? '\n(' + (previewDates.length - addedCount) + ' 個重複的聚會已略過)' : ''}`);
 }
 
 // === AI 批量匯入講道功能 ===
 let parsedAiData = [];
 
-// 根據選取的類別更新 AI 提示詞
+// 根據選取的講道類別更新 AI 提示詞
 function updateAiPrompt() {
     const category = document.getElementById('aiCategory').value;
     const promptEl = document.getElementById('aiPrompt');
@@ -390,21 +524,33 @@ function closeAiImportModal() {
     document.getElementById('aiImportModal').classList.add('hidden');
 }
 
+// 統整背景點擊關閉視窗邏輯
 function closeModalOnBackdrop(event) {
-    if (event.target.id === 'batchModal') closeBatchModal();
-    else if (event.target.id === 'singleEventModal') closeSingleEventModal();
-    else if (event.target.id === 'aiImportModal') closeAiImportModal();
+    if (event.target.id === 'batchModal') {
+        closeBatchModal();
+    } else if (event.target.id === 'singleEventModal') {
+        closeSingleEventModal();
+    } else if (event.target.id === 'aiImportModal') {
+        closeAiImportModal();
+    }
 }
 
+// 傳送資料給後端進行 AI 解析
 async function processAiText() {
-    if (!GAS_URL || GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') return alert('請先設定 GAS_URL');
+    if (!GAS_URL || GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
+        alert('請先設定 GAS_URL');
+        return;
+    }
 
     const rawText = document.getElementById('aiRawText').value.trim();
     const prompt = document.getElementById('aiPrompt').value.trim();
     const previewDiv = document.getElementById('aiPreview');
     const confirmBtn = document.getElementById('btnConfirmAi');
 
-    if (!rawText) return alert('請先貼上牧師的原始文字');
+    if (!rawText) {
+        alert('請先貼上牧師的原始文字');
+        return;
+    }
 
     previewDiv.innerHTML = '<div class="loading">⏳ AI 正在努力解析中，請稍候...</div>';
     confirmBtn.disabled = true;
@@ -412,8 +558,15 @@ async function processAiText() {
     try {
         const response = await fetch(GAS_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'ai_parse', prompt: prompt, rawText: rawText })
+            // 注意：這裡不加 mode: 'no-cors'，因為我們需要讀取回傳的 JSON
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8', 
+            },
+            body: JSON.stringify({
+                action: 'ai_parse',
+                prompt: prompt,
+                rawText: rawText
+            })
         });
 
         const data = await response.json();
@@ -446,31 +599,41 @@ async function processAiText() {
         } else {
             throw new Error(data.error || '後端回傳未知的錯誤');
         }
+
     } catch (error) {
         console.error('AI 解析錯誤:', error);
         previewDiv.innerHTML = `<span style="color: #e53e3e;">❌ 解析失敗，請確認資料格式或聯絡管理員。(${error.message})</span>`;
     }
 }
 
+// 寫入行事曆
 function confirmAiImport() {
     if (parsedAiData.length === 0) return;
 
-    // 取得使用者在 AI 視窗選擇的類別
-    const selectedCategory = document.getElementById('aiCategory').value;
+    // 取得使用者在 AI 視窗選擇的語言類別
+    const selectedLanguage = document.getElementById('aiCategory').value;
     let addedCount = 0;
 
     parsedAiData.forEach(aiItem => {
-        let targetEvent = events.find(e => e.date === aiItem.date && e.category === selectedCategory);
+        let targetEvent = events.find(e => e.date === aiItem.date);
         
         let finalEventName = '主日崇拜';
-        if (aiItem.eventName) finalEventName += ` (${aiItem.eventName})`;
+        let eventCategory = '台華語聚會'; // 預設為台華語聚會
+
+        if (aiItem.eventName) {
+            finalEventName += ` (${aiItem.eventName})`;
+            // 智慧判斷：如果名稱有聯合，自動切換為聯合聚會
+            if (aiItem.eventName.includes('聯合')) {
+                eventCategory = '聯合聚會';
+            }
+        }
 
         if (!targetEvent) {
             targetEvent = {
                 id: eventIdCounter++,
                 date: aiItem.date,
                 name: finalEventName,
-                category: selectedCategory, // 使用選擇的類別
+                category: eventCategory,
                 subItems: [],
                 showSub: true
             };
@@ -480,12 +643,18 @@ function confirmAiImport() {
             if (aiItem.eventName && targetEvent.name === '主日崇拜') {
                 targetEvent.name = finalEventName;
             }
+            if (aiItem.eventName && aiItem.eventName.includes('聯合')) {
+                targetEvent.category = '聯合聚會';
+            }
         }
+
+        // 將事工項目名稱自動標註語言 (例如: 信息分享(華語))，這會觸發前端的隱藏欄位邏輯
+        const itemLabel = selectedLanguage === '華語' ? '信息分享(華語)' : '信息分享(台語/聯合)';
 
         targetEvent.subItems.push({
             id: subItemIdCounter++,
             date: aiItem.date,
-            item: '信息分享', 
+            item: itemLabel, 
             title: aiItem.title || '',
             speaker: aiItem.speaker || '',
             scripture: aiItem.scripture || '',
