@@ -397,7 +397,7 @@
     </div>
 
     <!-- 批量新增對話框 -->
-    <div id="batchModal" class="modal hidden">
+    <div id="batchModal" class="modal hidden" onclick="closeBatchModal(event)">
         <div class="modal-content">
             <div class="modal-header">
                 <h2>📅 批量新增聚會</h2>
@@ -748,8 +748,11 @@
         }
 
         // 關閉批量新增對話框
-        function closeBatchModal() {
-            document.getElementById('batchModal').classList.add('hidden');
+        function closeBatchModal(event) {
+            // 如果點擊的是遮罩背景，或是關閉按鈕，則關閉對話框
+            if (!event || event.target.id === 'batchModal' || event.target.classList.contains('btn-close')) {
+                document.getElementById('batchModal').classList.add('hidden');
+            }
         }
 
         // 切換星期選擇
