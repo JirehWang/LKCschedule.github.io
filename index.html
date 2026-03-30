@@ -80,7 +80,41 @@
             </div>
         </div>
     </div>
-
+    <div id="singleEventModal" class="modal hidden" onclick="closeModalOnBackdrop(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2>➕ 新增聚會</h2>
+                <button class="btn-close" onclick="closeSingleEventModal()">✕</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label>日期 *</label>
+                        <input type="date" id="singleDate" required>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>聚會名稱</label>
+                        <input type="text" id="singleName" placeholder="例：主日崇拜">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>聚會類別</label>
+                        <select id="singleCategory">
+                            <option>台華語聚會</option>
+                            <option>聯合聚會</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-success" onclick="confirmSingleEventAdd()">✓ 確認新增</button>
+                <button class="btn" onclick="closeSingleEventModal()" style="background: #cbd5e0; color: #2d3748;">取消</button>
+            </div>
+        </div>
+    </div>
     <script src="script.js"></script>
 </body>
 </html>
