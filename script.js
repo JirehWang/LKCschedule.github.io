@@ -215,8 +215,7 @@ function exportToExcel() {
         return;
     }
 
-    // 建立 CSV 內容
-    let csv = '\uFEFF'; // UTF-8 BOM
+    let csv = '\uFEFF';
     csv += '日期,聚會名稱,聚會類別,細項日期,事工項目,事工內容描述\n';
 
     events.forEach(event => {
@@ -229,7 +228,6 @@ function exportToExcel() {
         }
     });
 
-    // 下載檔案
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -248,7 +246,6 @@ async function saveToGAS() {
         return;
     }
 
-    // 取得按鈕並改變狀態為「儲存中」
     const saveBtn = document.querySelector('button[onclick="saveToGAS()"]');
     const originalText = saveBtn.innerHTML;
     saveBtn.innerHTML = '⏳ 儲存中...';
@@ -273,7 +270,6 @@ async function saveToGAS() {
         console.error('儲存失敗:', error);
         alert('儲存失敗，請檢查網路連線');
     } finally {
-        // 無論成功或失敗，都恢復按鈕原本的狀態
         saveBtn.innerHTML = originalText;
         saveBtn.disabled = false;
         saveBtn.style.opacity = '1';
@@ -288,7 +284,6 @@ async function loadFromGAS() {
         return;
     }
 
-    // 取得按鈕並改變狀態為「載入中」
     const loadBtn = document.querySelector('button[onclick="loadFromGAS()"]');
     const originalText = loadBtn.innerHTML;
     loadBtn.innerHTML = '⏳ 載入中...';
@@ -312,7 +307,6 @@ async function loadFromGAS() {
         console.error('載入失敗:', error);
         alert('載入失敗，請檢查網路連線');
     } finally {
-        // 無論成功或失敗，都恢復按鈕原本的狀態
         loadBtn.innerHTML = originalText;
         loadBtn.disabled = false;
         loadBtn.style.opacity = '1';
@@ -324,10 +318,8 @@ async function loadFromGAS() {
 let selectedWeekdays = new Set();
 let previewDates = [];
 
-// 開啟批量新增對話框
 function openBatchModal() {
     document.getElementById('batchModal').classList.remove('hidden');
-    // 重置表單
     document.getElementById('batchStartDate').value = '';
     document.getElementById('batchEndDate').value = '';
     document.getElementById('batchName').value = '';
@@ -335,7 +327,6 @@ function openBatchModal() {
     selectedWeekdays.clear();
     previewDates = [];
     
-    // 重置星期按鈕
     document.querySelectorAll('.weekday-btn').forEach(btn => {
         btn.classList.remove('active');
     });
@@ -344,21 +335,10 @@ function openBatchModal() {
     document.getElementById('datePreview').classList.remove('has-dates');
 }
 
-// 關閉批量新增對話框
 function closeBatchModal() {
     document.getElementById('batchModal').classList.add('hidden');
 }
 
-// 點擊背景關閉對話框
-function closeModalOnBackdrop(event) {
-    if (event.target.id === 'batchModal') {
-        closeBatchModal();
-    } else if (event.target.id === 'singleEventModal') {
-        closeSingleEventModal();
-    }
-}
-
-// 切換星期選擇
 function toggleWeekday(day) {
     if (selectedWeekdays.has(day)) {
         selectedWeekdays.delete(day);
@@ -366,12 +346,10 @@ function toggleWeekday(day) {
         selectedWeekdays.add(day);
     }
     
-    // 更新按鈕樣式
     const btn = document.querySelector(`.weekday-btn[data-day="${day}"]`);
     btn.classList.toggle('active');
 }
 
-// 預覽將要新增的日期
 function previewBatchDates() {
     const startDate = document.getElementById('batchStartDate').value;
     const endDate = document.getElementById('batchEndDate').value;
@@ -394,7 +372,6 @@ function previewBatchDates() {
         return;
     }
     
-    // 計算符合條件的日期
     previewDates = [];
     const current = new Date(start);
     
@@ -406,7 +383,6 @@ function previewBatchDates() {
         current.setDate(current.getDate() + 1);
     }
     
-    // 顯示預覽
     const previewDiv = document.getElementById('datePreview');
     if (previewDates.length === 0) {
         previewDiv.innerHTML = '在選定的日期區間內，沒有符合條件的日期';
@@ -426,7 +402,6 @@ function previewBatchDates() {
     }
 }
 
-// 確認批量新增
 function confirmBatchAdd() {
     const name = document.getElementById('batchName').value.trim();
     const category = document.getElementById('batchCategory').value;
@@ -436,12 +411,9 @@ function confirmBatchAdd() {
         return;
     }
     
-    // 批量建立聚會
     let addedCount = 0;
     previewDates.forEach(date => {
         const dateStr = date.toISOString().split('T')[0];
-        
-        // 檢查是否已存在相同日期和名稱的聚會（名稱可為空）
         const exists = events.some(e => e.date === dateStr && e.name === name);
         
         if (!exists) {
@@ -457,12 +429,143 @@ function confirmBatchAdd() {
         }
     });
     
-    // 依日期排序
     events.sort((a, b) => new Date(a.date) - new Date(b.date));
-    
     renderEvents();
     saveToLocalStorage();
     closeBatchModal();
     
     alert(`成功新增 ${addedCount} 個聚會！${previewDates.length - addedCount > 0 ? '\n(' + (previewDates.length - addedCount) + ' 個重複的聚會已略過)' : ''}`);
+}
+
+// === AI 批量匯入講道功能 ===
+let parsedAiData = [];
+
+function openAiImportModal() {
+    document.getElementById('aiImportModal').classList.remove('hidden');
+    document.getElementById('aiRawText').value = '';
+    document.getElementById('aiPreview').innerHTML = '請輸入文字並點擊「開始解析」';
+    document.getElementById('aiPreview').classList.remove('has-dates');
+    document.getElementById('btnConfirmAi').disabled = true;
+    parsedAiData = [];
+}
+
+function closeAiImportModal() {
+    document.getElementById('aiImportModal').classList.add('hidden');
+}
+
+// 統整背景點擊關閉視窗邏輯
+function closeModalOnBackdrop(event) {
+    if (event.target.id === 'batchModal') {
+        closeBatchModal();
+    } else if (event.target.id === 'singleEventModal') {
+        closeSingleEventModal();
+    } else if (event.target.id === 'aiImportModal') {
+        closeAiImportModal();
+    }
+}
+
+// 傳送資料給後端進行 AI 解析
+async function processAiText() {
+    if (!GAS_URL || GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
+        alert('請先設定 GAS_URL');
+        return;
+    }
+
+    const rawText = document.getElementById('aiRawText').value.trim();
+    const prompt = document.getElementById('aiPrompt').value.trim();
+    const previewDiv = document.getElementById('aiPreview');
+    const confirmBtn = document.getElementById('btnConfirmAi');
+
+    if (!rawText) {
+        alert('請先貼上牧師的原始文字');
+        return;
+    }
+
+    previewDiv.innerHTML = '<div class="loading">⏳ AI 正在努力解析中，請稍候...</div>';
+    confirmBtn.disabled = true;
+
+    try {
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            // 注意：這裡不加 mode: 'no-cors'，因為我們需要讀取回傳的 JSON
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8', 
+            },
+            body: JSON.stringify({
+                action: 'ai_parse',
+                prompt: prompt,
+                rawText: rawText
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            parsedAiData = JSON.parse(data.result);
+
+            if (parsedAiData.length > 0) {
+                let html = `<div class="preview-count">成功解析出 ${parsedAiData.length} 筆講道資訊</div>`;
+                parsedAiData.forEach(item => {
+                    html += `
+                        <div class="sub-item" style="margin-top: 8px;">
+                            <strong>📅 ${item.date}</strong> | 
+                            <span style="color: #667eea;">${item.item}</span><br>
+                            <span style="font-size: 13px; color: #718096;">${item.description}</span>
+                        </div>`;
+                });
+                previewDiv.innerHTML = html;
+                previewDiv.classList.add('has-dates');
+                confirmBtn.disabled = false;
+            } else {
+                previewDiv.innerHTML = '無法解析出有效資訊，請調整提示詞或檢查原始文字。';
+            }
+        } else {
+            throw new Error(data.error || '後端回傳未知的錯誤');
+        }
+
+    } catch (error) {
+        console.error('AI 解析錯誤:', error);
+        previewDiv.innerHTML = `<span style="color: #e53e3e;">❌ 解析失敗，請確保後端已部署為最新版本。(${error.message})</span>`;
+    }
+}
+
+// 寫入行事曆
+function confirmAiImport() {
+    if (parsedAiData.length === 0) return;
+
+    let addedCount = 0;
+
+    parsedAiData.forEach(aiItem => {
+        let targetEvent = events.find(e => e.date === aiItem.date);
+
+        if (!targetEvent) {
+            targetEvent = {
+                id: eventIdCounter++,
+                date: aiItem.date,
+                name: '主日崇拜',
+                category: aiItem.item.includes('華語') ? '台華語聚會' : '聯合聚會',
+                subItems: [],
+                showSub: true
+            };
+            events.push(targetEvent);
+        } else {
+            targetEvent.showSub = true; 
+        }
+
+        targetEvent.subItems.push({
+            id: subItemIdCounter++,
+            date: aiItem.date,
+            item: aiItem.item,
+            description: aiItem.description
+        });
+        
+        addedCount++;
+    });
+
+    events.sort((a, b) => new Date(a.date) - new Date(b.date));
+    renderEvents();
+    saveToLocalStorage();
+    closeAiImportModal();
+
+    alert(`✅ 成功將 ${addedCount} 筆講道資訊整合進行事曆！`);
 }
