@@ -49,8 +49,8 @@
                     <div class="input-group">
                         <label>聚會類別</label>
                         <select id="batchCategory">
-                            <option value="台語/聯合">台語/聯合</option>
-                            <option value="華語">華語</option>
+                            <option>台華語聚會</option>
+                            <option>聯合聚會</option>
                         </select>
                     </div>
                 </div>
@@ -104,8 +104,8 @@
                     <div class="input-group">
                         <label>聚會類別</label>
                         <select id="singleCategory">
-                            <option value="台語/聯合">台語/聯合</option>
-                            <option value="華語">華語</option>
+                            <option>台華語聚會</option>
+                            <option>聯合聚會</option>
                         </select>
                     </div>
                 </div>
@@ -127,10 +127,10 @@
             
             <div class="modal-body">
                 <div class="input-group" style="margin-bottom: 15px;">
-                    <label>匯入的聚會類別 (將影響 AI 抓取的欄位)</label>
+                    <label>本次匯入的講道語言 (將影響抓取的欄位)</label>
                     <select id="aiCategory" style="font-weight: bold; color: #3182ce;" onchange="updateAiPrompt()">
-                        <option value="台語/聯合">台語/聯合 (包含講題、講員、經文、宣召、金句、聖詩)</option>
-                        <option value="華語">華語 (僅包含講題、講員、經文、宣召)</option>
+                        <option value="台語/聯合">台語/聯合講道 (包含講題、講員、經文、宣召、金句、聖詩)</option>
+                        <option value="華語">華語講道 (僅包含講題、講員、經文、宣召)</option>
                     </select>
                 </div>
 
