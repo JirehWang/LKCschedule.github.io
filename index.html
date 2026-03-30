@@ -13,6 +13,7 @@
         <div class="controls">
             <button class="btn btn-primary" onclick="addEvent()">➕ 新增聚會</button>
             <button class="btn btn-primary" onclick="openBatchModal()">📅 批量新增</button>
+            <button class="btn btn-primary" onclick="openAiImportModal()">🤖 AI 匯入講道</button>
             <button class="btn btn-success" onclick="exportToExcel()">📊 匯出 Excel</button>
             <button class="btn btn-primary" onclick="saveToGAS()">💾 儲存到雲端</button>
             <button class="btn btn-primary" onclick="loadFromGAS()">📥 從雲端載入</button>
@@ -80,6 +81,7 @@
             </div>
         </div>
     </div>
+
     <div id="singleEventModal" class="modal hidden" onclick="closeModalOnBackdrop(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
@@ -115,6 +117,48 @@
             </div>
         </div>
     </div>
+
+    <div id="aiImportModal" class="modal hidden" onclick="closeModalOnBackdrop(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2>🤖 AI 批量匯入講道資訊</h2>
+                <button class="btn-close" onclick="closeAiImportModal()">✕</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="input-group" style="margin-bottom: 15px;">
+                    <label>自訂 AI 提示詞 (Prompt)</label>
+                    <textarea id="aiPrompt" style="min-height: 100px;">你是一個教會行政助理。請將以下牧師提供的講道資訊，轉換為嚴格的 JSON 格式陣列。
+輸入文字中會包含日期、講員、講題，以及語言（台語/聯合 或 華語）。
+請依照以下格式輸出（只輸出 JSON，不要包含 ```json 標籤或其他說明文字）：
+[
+  {
+    "date": "YYYY-MM-DD",
+    "item": "講道 (語言)",
+    "description": "講題：[講題名稱] / 講員：[講員名稱]"
+  }
+]</textarea>
+                </div>
+                
+                <div class="input-group" style="margin-bottom: 15px;">
+                    <label>貼上牧師的原始文字 *</label>
+                    <textarea id="aiRawText" placeholder="例：3/31 華語：耶穌復活(張牧師)；台語：活潑的盼望(李牧師)..." style="min-height: 120px;" required></textarea>
+                </div>
+
+                <div class="preview-section">
+                    <label class="section-label">AI 解析預覽</label>
+                    <div id="aiPreview" class="date-preview">請輸入文字並點擊「開始解析」</div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="processAiText()">🧠 開始解析</button>
+                <button class="btn btn-success" id="btnConfirmAi" onclick="confirmAiImport()" disabled>✓ 寫入行事曆</button>
+                <button class="btn" onclick="closeAiImportModal()" style="background: #cbd5e0; color: #2d3748;">取消</button>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
