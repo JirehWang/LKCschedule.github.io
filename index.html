@@ -424,12 +424,8 @@
                     <div class="input-group">
                         <label>聚會類別</label>
                         <select id="batchCategory">
-                            <option>主日崇拜</option>
-                            <option>禱告會</option>
-                            <option>小組聚會</option>
-                            <option>特別聚會</option>
-                            <option>服事</option>
-                            <option>其他</option>
+                            <option>台華語聚會</option>
+                            <option>聯合聚會</option>
                         </select>
                     </div>
                 </div>
@@ -482,7 +478,7 @@
                 id: eventIdCounter++,
                 date: new Date().toISOString().split('T')[0],
                 name: '',
-                category: '主日崇拜',
+                category: '台華語聚會',
                 subItems: [],
                 showSub: false
             };
@@ -584,12 +580,8 @@
                         <div class="input-group">
                             <label>聚會類別</label>
                             <select onchange="updateEvent(${event.id}, 'category', this.value)">
-                                <option ${event.category === '主日崇拜' ? 'selected' : ''}>主日崇拜</option>
-                                <option ${event.category === '禱告會' ? 'selected' : ''}>禱告會</option>
-                                <option ${event.category === '小組聚會' ? 'selected' : ''}>小組聚會</option>
-                                <option ${event.category === '特別聚會' ? 'selected' : ''}>特別聚會</option>
-                                <option ${event.category === '服事' ? 'selected' : ''}>服事</option>
-                                <option ${event.category === '其他' ? 'selected' : ''}>其他</option>
+                                <option ${event.category === '台華語聚會' ? 'selected' : ''}>台華語聚會</option>
+                                <option ${event.category === '聯合聚會' ? 'selected' : ''}>聯合聚會</option>
                             </select>
                         </div>
                         <button class="btn btn-danger btn-small" onclick="deleteEvent(${event.id})">刪除</button>
@@ -742,7 +734,7 @@
             document.getElementById('batchStartDate').value = '';
             document.getElementById('batchEndDate').value = '';
             document.getElementById('batchName').value = '';
-            document.getElementById('batchCategory').value = '主日崇拜';
+            document.getElementById('batchCategory').value = '台華語聚會';
             selectedWeekdays.clear();
             previewDates = [];
             
