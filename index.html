@@ -49,8 +49,8 @@
                     <div class="input-group">
                         <label>聚會類別</label>
                         <select id="batchCategory">
-                            <option>台華語聚會</option>
-                            <option>聯合聚會</option>
+                            <option value="台語/聯合">台語/聯合</option>
+                            <option value="華語">華語</option>
                         </select>
                     </div>
                 </div>
@@ -104,8 +104,8 @@
                     <div class="input-group">
                         <label>聚會類別</label>
                         <select id="singleCategory">
-                            <option>台華語聚會</option>
-                            <option>聯合聚會</option>
+                            <option value="台語/聯合">台語/聯合</option>
+                            <option value="華語">華語</option>
                         </select>
                     </div>
                 </div>
@@ -127,22 +127,21 @@
             
             <div class="modal-body">
                 <div class="input-group" style="margin-bottom: 15px;">
+                    <label>匯入的聚會類別 (將影響 AI 抓取的欄位)</label>
+                    <select id="aiCategory" style="font-weight: bold; color: #3182ce;" onchange="updateAiPrompt()">
+                        <option value="台語/聯合">台語/聯合 (包含講題、講員、經文、宣召、金句、聖詩)</option>
+                        <option value="華語">華語 (僅包含講題、講員、經文、宣召)</option>
+                    </select>
+                </div>
+
+                <div class="input-group" style="margin-bottom: 15px;">
                     <label>自訂 AI 提示詞 (Prompt)</label>
-                    <textarea id="aiPrompt" style="min-height: 100px;">你是一個教會行政助理。請將以下牧師提供的講道資訊，轉換為嚴格的 JSON 格式陣列。
-輸入文字中會包含日期、講員、講題，以及語言（台語/聯合 或 華語）。
-請依照以下格式輸出（只輸出 JSON，不要包含 ```json 標籤或其他說明文字）：
-[
-  {
-    "date": "YYYY-MM-DD",
-    "item": "講道 (語言)",
-    "description": "講題：[講題名稱] / 講員：[講員名稱]"
-  }
-]</textarea>
+                    <textarea id="aiPrompt" style="min-height: 180px;"></textarea>
                 </div>
                 
                 <div class="input-group" style="margin-bottom: 15px;">
                     <label>貼上牧師的原始文字 *</label>
-                    <textarea id="aiRawText" placeholder="例：3/31 華語：耶穌復活(張牧師)；台語：活潑的盼望(李牧師)..." style="min-height: 120px;" required></textarea>
+                    <textarea id="aiRawText" placeholder="貼上牧師提供的原始講道大綱..." style="min-height: 150px;" required></textarea>
                 </div>
 
                 <div class="preview-section">
