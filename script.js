@@ -12,19 +12,48 @@ document.addEventListener('DOMContentLoaded', function() {
     renderEvents();
 });
 
-// 新增聚會
+// 新增單一對話框的專屬邏輯
 function addEvent() {
+    document.getElementById('singleEventModal').classList.remove('hidden');
+    // 開啟時預設帶入今天日期，並清空其他欄位
+    document.getElementById('singleDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('singleName').value = '';
+    document.getElementById('singleCategory').value = '台華語聚會';
+}
+
+// 關閉單一新增對話框
+function closeSingleEventModal() {
+    document.getElementById('singleEventModal').classList.add('hidden');
+}
+
+// 確認單一新增
+function confirmSingleEventAdd() {
+    const dateStr = document.getElementById('singleDate').value;
+    const name = document.getElementById('singleName').value.trim();
+    const category = document.getElementById('singleCategory').value;
+
+    if (!dateStr) {
+        alert('請選擇日期');
+        return;
+    }
+
     const event = {
         id: eventIdCounter++,
-        date: new Date().toISOString().split('T')[0],
-        name: '',
-        category: '台華語聚會',
+        date: dateStr,
+        name: name,
+        category: category,
         subItems: [],
         showSub: false
     };
+    
     events.push(event);
+    
+    // 新增後自動依日期排序
+    events.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
     renderEvents();
     saveToLocalStorage();
+    closeSingleEventModal();
 }
 
 // 刪除聚會
@@ -219,6 +248,14 @@ async function saveToGAS() {
         return;
     }
 
+    // 取得按鈕並改變狀態為「儲存中」
+    const saveBtn = document.querySelector('button[onclick="saveToGAS()"]');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '⏳ 儲存中...';
+    saveBtn.disabled = true;
+    saveBtn.style.opacity = '0.7';
+    saveBtn.style.cursor = 'not-allowed';
+
     try {
         const response = await fetch(GAS_URL, {
             method: 'POST',
@@ -235,6 +272,12 @@ async function saveToGAS() {
     } catch (error) {
         console.error('儲存失敗:', error);
         alert('儲存失敗，請檢查網路連線');
+    } finally {
+        // 無論成功或失敗，都恢復按鈕原本的狀態
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+        saveBtn.style.opacity = '1';
+        saveBtn.style.cursor = 'pointer';
     }
 }
 
@@ -244,6 +287,14 @@ async function loadFromGAS() {
         alert('請先設定 GAS_URL');
         return;
     }
+
+    // 取得按鈕並改變狀態為「載入中」
+    const loadBtn = document.querySelector('button[onclick="loadFromGAS()"]');
+    const originalText = loadBtn.innerHTML;
+    loadBtn.innerHTML = '⏳ 載入中...';
+    loadBtn.disabled = true;
+    loadBtn.style.opacity = '0.7';
+    loadBtn.style.cursor = 'not-allowed';
 
     try {
         const response = await fetch(`${GAS_URL}?action=load`);
@@ -260,6 +311,12 @@ async function loadFromGAS() {
     } catch (error) {
         console.error('載入失敗:', error);
         alert('載入失敗，請檢查網路連線');
+    } finally {
+        // 無論成功或失敗，都恢復按鈕原本的狀態
+        loadBtn.innerHTML = originalText;
+        loadBtn.disabled = false;
+        loadBtn.style.opacity = '1';
+        loadBtn.style.cursor = 'pointer';
     }
 }
 
@@ -296,6 +353,8 @@ function closeBatchModal() {
 function closeModalOnBackdrop(event) {
     if (event.target.id === 'batchModal') {
         closeBatchModal();
+    } else if (event.target.id === 'singleEventModal') {
+        closeSingleEventModal();
     }
 }
 
