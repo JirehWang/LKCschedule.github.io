@@ -397,8 +397,8 @@
     </div>
 
     <!-- 批量新增對話框 -->
-    <div id="batchModal" class="modal hidden" onclick="closeBatchModal(event)">
-        <div class="modal-content">
+    <div id="batchModal" class="modal hidden" onclick="closeModalOnBackdrop(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <h2>📅 批量新增聚會</h2>
                 <button class="btn-close" onclick="closeBatchModal()">✕</button>
@@ -748,10 +748,14 @@
         }
 
         // 關閉批量新增對話框
-        function closeBatchModal(event) {
-            // 如果點擊的是遮罩背景，或是關閉按鈕，則關閉對話框
-            if (!event || event.target.id === 'batchModal' || event.target.classList.contains('btn-close')) {
-                document.getElementById('batchModal').classList.add('hidden');
+        function closeBatchModal() {
+            document.getElementById('batchModal').classList.add('hidden');
+        }
+
+        // 點擊背景關閉對話框
+        function closeModalOnBackdrop(event) {
+            if (event.target.id === 'batchModal') {
+                closeBatchModal();
             }
         }
 
