@@ -214,7 +214,7 @@ function renderEvents() {
                 
                                 <div style="background: #fffafa; border: 1px solid #fed7d7; padding: 15px; border-radius: 8px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #feb2b2; padding-bottom: 10px;">
-                        <h4 style="margin: 0; color: #c53030;">📋 事工細項 (籌備期逐筆新增)</h4>
+                        <h4 style="margin: 0; color: #c53030;">📋 事工細項 </h4>
                         <button class="btn btn-primary btn-small" onclick="addMinistryItem(${event.id})" style="background: #c53030;">➕ 新增事工</button>
                     </div>
                     ${ministryItems.map(min => `
@@ -237,7 +237,7 @@ function renderEvents() {
 
                                 <div style="background: #f0f4f8; border: 1px solid #bee3f8; padding: 15px; border-radius: 8px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #90cdf4; padding-bottom: 10px;">
-                        <h4 style="margin: 0; color: #2b6cb0;">🎙️ 講道資訊 (當天)</h4>
+                        <h4 style="margin: 0; color: #2b6cb0;">🎙️ 講道資訊 </h4>
                         <div style="display: flex; gap: 10px;">
                             <button class="btn btn-primary btn-small" onclick="addSermon(${event.id}, '台語/聯合')" style="background: #3182ce;">➕ 台語/聯合講道</button>
                             <button class="btn btn-primary btn-small" onclick="addSermon(${event.id}, '華語')" style="background: #38a169;">➕ 華語講道</button>
