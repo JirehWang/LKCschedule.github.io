@@ -496,9 +496,9 @@ function updateAiPrompt() {
     "date": "YYYY-MM-DD",
     "eventName": "特別聚會名稱 (如: 復活節聯合禮拜、母親節，若無則留空)",
     "speaker": "講員 (若無則留空)",
-    "title": "講題 (去掉中括號【】)",
-    "scripture": "經文內容",
-    "callToWorship": "宣召內容"`;
+    "title": "講題 (去掉中括號【】，若無則留空)",
+    "scripture": "經文內容，若無則留空",
+    "callToWorship": "宣召內容，若無則留空"`;
 
     if (category === '台語/聯合') {
         basePrompt += `,\n    "goldenVerse": "金句內容",\n    "hymns": "聖詩/回應詩內容"\n  }\n]`;
