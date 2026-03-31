@@ -1,7 +1,8 @@
 // 全域變數
 let events = [];
 let eventIdCounter = 1;
-let subItemIdCounter = 1;
+let ministryIdCounter = 1; // 事工細項計數器
+let sermonIdCounter = 1;   // 講道資訊計數器
 
 // GAS Web App URL - 請替換成你部署後的 URL
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwiYYWgKxmLRAEaE_pbp_kWyAzlRPcwYVQfvmJVamRJvosvt5wTTkvwebbFBkP8rMqX/exec';
@@ -42,8 +43,9 @@ function confirmSingleEventAdd() {
         date: dateStr,
         name: name,
         category: category,
-        subItems: [],
-        showSub: false
+        ministryItems: [], // 籌備事工
+        sermons: [],       // 當天講道
+        showSub: true      // 新增後預設展開方便編輯
     };
     
     events.push(event);
@@ -83,14 +85,52 @@ function toggleSubItems(eventId) {
     }
 }
 
-// 新增子項目
-function addSubItem(eventId) {
+// ====================
+// 事工細項相關功能 (籌備期)
+// ====================
+function addMinistryItem(eventId) {
     const event = events.find(e => e.id === eventId);
     if (event) {
-        event.subItems.push({
-            id: subItemIdCounter++,
-            date: new Date().toISOString().split('T')[0],
-            item: '',
+        event.ministryItems.push({
+            id: ministryIdCounter++,
+            period: '',
+            content: ''
+        });
+        event.showSub = true;
+        renderEvents();
+        saveToLocalStorage();
+    }
+}
+
+function deleteMinistryItem(eventId, minId) {
+    const event = events.find(e => e.id === eventId);
+    if (event) {
+        event.ministryItems = event.ministryItems.filter(m => m.id !== minId);
+        renderEvents();
+        saveToLocalStorage();
+    }
+}
+
+function updateMinistryItem(eventId, minId, field, value) {
+    const event = events.find(e => e.id === eventId);
+    if (event) {
+        const item = event.ministryItems.find(m => m.id === minId);
+        if (item) {
+            item[field] = value;
+            saveToLocalStorage();
+        }
+    }
+}
+
+// ====================
+// 講道資訊相關功能 (當天)
+// ====================
+function addSermon(eventId, type) {
+    const event = events.find(e => e.id === eventId);
+    if (event) {
+        event.sermons.push({
+            id: sermonIdCounter++,
+            type: type, // 台語/聯合 或 華語
             title: '',
             speaker: '',
             scripture: '',
@@ -105,33 +145,29 @@ function addSubItem(eventId) {
     }
 }
 
-// 刪除子項目
-function deleteSubItem(eventId, subId) {
+function deleteSermon(eventId, sermonId) {
     const event = events.find(e => e.id === eventId);
     if (event) {
-        event.subItems = event.subItems.filter(s => s.id !== subId);
+        event.sermons = event.sermons.filter(s => s.id !== sermonId);
         renderEvents();
         saveToLocalStorage();
     }
 }
 
-// 更新子項目
-function updateSubItem(eventId, subId, field, value) {
+function updateSermon(eventId, sermonId, field, value) {
     const event = events.find(e => e.id === eventId);
     if (event) {
-        const subItem = event.subItems.find(s => s.id === subId);
-        if (subItem) {
-            subItem[field] = value;
+        const sermon = event.sermons.find(s => s.id === sermonId);
+        if (sermon) {
+            sermon[field] = value;
             saveToLocalStorage();
-            // 如果更改的是事工名稱且包含「華語」，重新渲染以更新對應的欄位隱藏狀態
-            if (field === 'item') {
-                renderEvents();
-            }
         }
     }
 }
 
+// ====================
 // 渲染所有聚會
+// ====================
 function renderEvents() {
     const container = document.getElementById('eventList');
     container.innerHTML = '';
@@ -142,6 +178,10 @@ function renderEvents() {
     }
 
     events.forEach(event => {
+        // 防呆：確保舊資料也有這兩個陣列
+        const ministryItems = event.ministryItems || [];
+        const sermons = event.sermons || [];
+
         const card = document.createElement('div');
         card.className = 'event-card';
         card.innerHTML = `
@@ -167,69 +207,90 @@ function renderEvents() {
             </div>
             
             <button class="btn toggle-sub btn-small" onclick="toggleSubItems(${event.id})">
-                ${event.showSub ? '▼' : '▶'} 細項事工 (${event.subItems.length})
+                ${event.showSub ? '▼' : '▶'} 聚會詳情 (事工:${ministryItems.length} / 講道:${sermons.length})
             </button>
             
-            <div class="sub-items ${event.showSub ? '' : 'hidden'}">
-                <button class="btn btn-primary btn-small" onclick="addSubItem(${event.id})" 
-                        style="margin-bottom: 15px;">➕ 新增事工/講道</button>
-                ${event.subItems.map(sub => {
-                    // 根據【細項的事工項目】名稱是否包含「華語」來決定隱藏欄位
-                    const isMandarin = sub.item.includes('華語');
-                    const hideStyle = isMandarin ? 'display: none;' : '';
-                    
-                    return `
-                    <div class="sub-item">
-                        <div style="display: flex; gap: 15px; align-items: flex-end; margin-bottom: 10px;">
+            <div class="sub-items ${event.showSub ? '' : 'hidden'}" style="display: flex; flex-direction: column; gap: 20px;">
+                
+                <div style="background: #fffafa; border: 1px solid #fed7d7; padding: 15px; border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #feb2b2; padding-bottom: 10px;">
+                        <h4 style="margin: 0; color: #c53030;">📋 事工細項 (籌備期)</h4>
+                        <button class="btn btn-primary btn-small" onclick="addMinistryItem(${event.id})" style="background: #c53030;">➕ 新增事工</button>
+                    </div>
+                    ${ministryItems.map(min => `
+                        <div class="sub-item" style="display: flex; gap: 15px; align-items: flex-start; margin-bottom: 10px;">
                             <div class="input-group" style="flex: 1;">
-                                <label>日期</label>
-                                <input type="date" value="${sub.date}"
-                                       onchange="updateSubItem(${event.id}, ${sub.id}, 'date', this.value)">
+                                <label>日期/期間</label>
+                                <input type="text" placeholder="例: 3/15-3/30" value="${min.period || ''}" 
+                                       onchange="updateMinistryItem(${event.id}, ${min.id}, 'period', this.value)">
                             </div>
                             <div class="input-group" style="flex: 2;">
-                                <label>事工項目 (如: 信息分享(華語))</label>
-                                <input type="text" placeholder="例: 信息分享(華語)"
-                                       value="${sub.item}"
-                                       onchange="updateSubItem(${event.id}, ${sub.id}, 'item', this.value)">
+                                <label>事工內容</label>
+                                <input type="text" placeholder="詳細說明..." value="${min.content || ''}" 
+                                       onchange="updateMinistryItem(${event.id}, ${min.id}, 'content', this.value)">
                             </div>
-                            <button class="btn btn-danger btn-small" style="height: 38px;"
-                                    onclick="deleteSubItem(${event.id}, ${sub.id})">刪除</button>
+                            <button class="btn btn-danger btn-small" style="margin-top: 24px;" 
+                                    onclick="deleteMinistryItem(${event.id}, ${min.id})">刪除</button>
                         </div>
-                        
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; padding: 10px; background: #f8fafc; border-radius: 6px; border: 1px dashed #cbd5e0;">
-                            <div class="input-group">
-                                <label>講題</label>
-                                <input type="text" value="${sub.title || ''}" onchange="updateSubItem(${event.id}, ${sub.id}, 'title', this.value)">
-                            </div>
-                            <div class="input-group">
-                                <label>講員</label>
-                                <input type="text" value="${sub.speaker || ''}" onchange="updateSubItem(${event.id}, ${sub.id}, 'speaker', this.value)">
-                            </div>
-                            <div class="input-group">
-                                <label>經文</label>
-                                <input type="text" value="${sub.scripture || ''}" onchange="updateSubItem(${event.id}, ${sub.id}, 'scripture', this.value)">
-                            </div>
-                            <div class="input-group">
-                                <label>宣召</label>
-                                <input type="text" value="${sub.callToWorship || ''}" onchange="updateSubItem(${event.id}, ${sub.id}, 'callToWorship', this.value)">
-                            </div>
-                            <div class="input-group" style="${hideStyle}">
-                                <label>金句</label>
-                                <input type="text" value="${sub.goldenVerse || ''}" onchange="updateSubItem(${event.id}, ${sub.id}, 'goldenVerse', this.value)">
-                            </div>
-                            <div class="input-group" style="${hideStyle}">
-                                <label>詩歌/聖詩</label>
-                                <input type="text" value="${sub.hymns || ''}" onchange="updateSubItem(${event.id}, ${sub.id}, 'hymns', this.value)">
-                            </div>
-                        </div>
+                    `).join('')}
+                </div>
 
-                        <div class="input-group" style="margin-top: 10px;">
-                            <label>內容描述 / 備註</label>
-                            <textarea placeholder="詳細說明..." style="min-height: 40px;"
-                                      onchange="updateSubItem(${event.id}, ${sub.id}, 'description', this.value)">${sub.description || ''}</textarea>
+                <div style="background: #f0f4f8; border: 1px solid #bee3f8; padding: 15px; border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #90cdf4; padding-bottom: 10px;">
+                        <h4 style="margin: 0; color: #2b6cb0;">🎙️ 講道資訊 (當天)</h4>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-primary btn-small" onclick="addSermon(${event.id}, '台語/聯合')" style="background: #3182ce;">➕ 台語/聯合講道</button>
+                            <button class="btn btn-primary btn-small" onclick="addSermon(${event.id}, '華語')" style="background: #38a169;">➕ 華語講道</button>
                         </div>
                     </div>
-                `}).join('')}
+                    ${sermons.map(sermon => {
+                        const isMandarin = sermon.type === '華語';
+                        const hideStyle = isMandarin ? 'display: none;' : '';
+                        const tagStyle = isMandarin ? 'background: #c6f6d5; color: #22543d;' : 'background: #bee3f8; color: #2a4365;';
+                        
+                        return `
+                        <div class="sub-item" style="border-left: 4px solid ${isMandarin ? '#38a169' : '#3182ce'}; padding-left: 15px; margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                <span style="padding: 4px 10px; border-radius: 4px; font-size: 13px; font-weight: bold; ${tagStyle}">${sermon.type}</span>
+                                <button class="btn btn-danger btn-small" onclick="deleteSermon(${event.id}, ${sermon.id})">刪除此講道</button>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+                                <div class="input-group">
+                                    <label>講題</label>
+                                    <input type="text" value="${sermon.title || ''}" onchange="updateSermon(${event.id}, ${sermon.id}, 'title', this.value)">
+                                </div>
+                                <div class="input-group">
+                                    <label>講員</label>
+                                    <input type="text" value="${sermon.speaker || ''}" onchange="updateSermon(${event.id}, ${sermon.id}, 'speaker', this.value)">
+                                </div>
+                                <div class="input-group">
+                                    <label>經文</label>
+                                    <input type="text" value="${sermon.scripture || ''}" onchange="updateSermon(${event.id}, ${sermon.id}, 'scripture', this.value)">
+                                </div>
+                                <div class="input-group">
+                                    <label>宣召</label>
+                                    <input type="text" value="${sermon.callToWorship || ''}" onchange="updateSermon(${event.id}, ${sermon.id}, 'callToWorship', this.value)">
+                                </div>
+                                <div class="input-group" style="${hideStyle}">
+                                    <label>金句</label>
+                                    <input type="text" value="${sermon.goldenVerse || ''}" onchange="updateSermon(${event.id}, ${sermon.id}, 'goldenVerse', this.value)">
+                                </div>
+                                <div class="input-group" style="${hideStyle}">
+                                    <label>詩歌/聖詩</label>
+                                    <input type="text" value="${sermon.hymns || ''}" onchange="updateSermon(${event.id}, ${sermon.id}, 'hymns', this.value)">
+                                </div>
+                            </div>
+
+                            <div class="input-group" style="margin-top: 10px;">
+                                <label>內容描述 / 備註</label>
+                                <textarea placeholder="詳細說明..." style="min-height: 40px;"
+                                          onchange="updateSermon(${event.id}, ${sermon.id}, 'description', this.value)">${sermon.description || ''}</textarea>
+                            </div>
+                        </div>
+                    `}).join('')}
+                </div>
+                
             </div>
         `;
         container.appendChild(card);
@@ -246,12 +307,22 @@ function loadFromLocalStorage() {
     if (saved) {
         events = JSON.parse(saved);
         eventIdCounter = Math.max(...events.map(e => e.id), 0) + 1;
-        const allSubIds = events.flatMap(e => e.subItems.map(s => s.id));
-        subItemIdCounter = Math.max(...allSubIds, 0) + 1;
+        
+        // 資料庫結構遷移防呆
+        events.forEach(e => {
+            if (!e.ministryItems) e.ministryItems = [];
+            if (!e.sermons) e.sermons = [];
+        });
+
+        const allMinIds = events.flatMap(e => e.ministryItems.map(m => m.id));
+        ministryIdCounter = Math.max(...allMinIds, 0) + 1;
+        
+        const allSermonIds = events.flatMap(e => e.sermons.map(s => s.id));
+        sermonIdCounter = Math.max(...allSermonIds, 0) + 1;
     }
 }
 
-// 匯出 Excel
+// 匯出 Excel (適應新結構)
 function exportToExcel() {
     if (events.length === 0) {
         alert('沒有資料可以匯出');
@@ -259,15 +330,25 @@ function exportToExcel() {
     }
 
     let csv = '\uFEFF';
-    csv += '日期,聚會名稱,聚會類別,細項日期,事工項目,講題,講員,經文,宣召,金句,詩歌,備註\n';
+    csv += '日期,聚會名稱,聚會類別,分類,細項日期/期間,內容/講題,講員,經文,宣召,金句,詩歌,備註\n';
 
     events.forEach(event => {
-        if (event.subItems.length === 0) {
+        const hasMinistry = event.ministryItems && event.ministryItems.length > 0;
+        const hasSermons = event.sermons && event.sermons.length > 0;
+
+        if (!hasMinistry && !hasSermons) {
             csv += `${event.date},"${event.name}","${event.category}",,,,,,,,,\n`;
         } else {
-            event.subItems.forEach(sub => {
-                csv += `${event.date},"${event.name}","${event.category}",${sub.date},"${sub.item}","${sub.title || ''}","${sub.speaker || ''}","${sub.scripture || ''}","${sub.callToWorship || ''}","${sub.goldenVerse || ''}","${sub.hymns || ''}","${(sub.description || '').replace(/\n/g, ' ')}"\n`;
-            });
+            if (hasMinistry) {
+                event.ministryItems.forEach(min => {
+                    csv += `${event.date},"${event.name}","${event.category}","籌備事工","${min.period || ''}","${min.content || ''}",,,,,,,\n`;
+                });
+            }
+            if (hasSermons) {
+                event.sermons.forEach(sermon => {
+                    csv += `${event.date},"${event.name}","${event.category}","講道(${sermon.type})",,"${sermon.title || ''}","${sermon.speaker || ''}","${sermon.scripture || ''}","${sermon.callToWorship || ''}","${sermon.goldenVerse || ''}","${sermon.hymns || ''}","${(sermon.description || '').replace(/\n/g, ' ')}"\n`;
+                });
+            }
         }
     });
 
@@ -339,9 +420,7 @@ async function loadFromGAS() {
         const data = await response.json();
         if (data.success && data.events) {
             events = data.events;
-            eventIdCounter = Math.max(...events.map(e => e.id), 0) + 1;
-            const allSubIds = events.flatMap(e => e.subItems.map(s => s.id));
-            subItemIdCounter = Math.max(...allSubIds, 0) + 1;
+            loadFromLocalStorage(); // 重新計算 Counter 確保正確
             renderEvents();
             saveToLocalStorage();
             alert('資料已從雲端載入！');
@@ -465,7 +544,8 @@ function confirmBatchAdd() {
                 date: dateStr,
                 name: name,
                 category: category,
-                subItems: [],
+                ministryItems: [],
+                sermons: [],
                 showSub: false
             });
             addedCount++;
@@ -634,7 +714,8 @@ function confirmAiImport() {
                 date: aiItem.date,
                 name: finalEventName,
                 category: eventCategory,
-                subItems: [],
+                ministryItems: [],
+                sermons: [],
                 showSub: true
             };
             events.push(targetEvent);
@@ -648,13 +729,10 @@ function confirmAiImport() {
             }
         }
 
-        // 將事工項目名稱自動標註語言 (例如: 信息分享(華語))，這會觸發前端的隱藏欄位邏輯
-        const itemLabel = selectedLanguage === '華語' ? '信息分享(華語)' : '信息分享(台語/聯合)';
-
-        targetEvent.subItems.push({
-            id: subItemIdCounter++,
-            date: aiItem.date,
-            item: itemLabel, 
+        // 寫入為「講道」資料 (放入 sermons 陣列)
+        targetEvent.sermons.push({
+            id: sermonIdCounter++,
+            type: selectedLanguage, // 台語/聯合 或 華語
             title: aiItem.title || '',
             speaker: aiItem.speaker || '',
             scripture: aiItem.scripture || '',
