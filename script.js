@@ -16,18 +16,15 @@ document.addEventListener('DOMContentLoaded', function() {
 // 新增單一對話框的專屬邏輯
 function addEvent() {
     document.getElementById('singleEventModal').classList.remove('hidden');
-    // 開啟時預設帶入今天日期，並清空其他欄位
     document.getElementById('singleDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('singleName').value = '';
     document.getElementById('singleCategory').value = '台華語聚會';
 }
 
-// 關閉單一新增對話框
 function closeSingleEventModal() {
     document.getElementById('singleEventModal').classList.add('hidden');
 }
 
-// 確認單一新增
 function confirmSingleEventAdd() {
     const dateStr = document.getElementById('singleDate').value;
     const name = document.getElementById('singleName').value.trim();
@@ -43,14 +40,12 @@ function confirmSingleEventAdd() {
         date: dateStr,
         name: name,
         category: category,
-        ministryItems: [], // 籌備事工
-        sermons: [],       // 當天講道
-        showSub: true      // 新增後預設展開方便編輯
+        ministryItems: [], 
+        sermons: [],       
+        showSub: true      
     };
     
     events.push(event);
-    
-    // 新增後自動依日期排序
     events.sort((a, b) => new Date(a.date) - new Date(b.date));
     
     renderEvents();
@@ -58,7 +53,6 @@ function confirmSingleEventAdd() {
     closeSingleEventModal();
 }
 
-// 刪除聚會
 function deleteEvent(eventId) {
     if (confirm('確定要刪除此聚會嗎？')) {
         events = events.filter(e => e.id !== eventId);
@@ -67,7 +61,6 @@ function deleteEvent(eventId) {
     }
 }
 
-// 更新聚會資料
 function updateEvent(eventId, field, value) {
     const event = events.find(e => e.id === eventId);
     if (event) {
@@ -76,24 +69,23 @@ function updateEvent(eventId, field, value) {
     }
 }
 
-// 切換子項目顯示
 function toggleSubItems(eventId) {
     const event = events.find(e => e.id === eventId);
     if (event) {
         event.showSub = !event.showSub;
-        renderEvents();
+        renderEvents(); // 現在呼叫 renderEvents 會自動維持搜尋狀態
     }
 }
 
 // ====================
-// 事工細項相關功能 (籌備期)
+// 事工細項相關功能
 // ====================
 function addMinistryItem(eventId) {
     const event = events.find(e => e.id === eventId);
     if (event) {
         event.ministryItems.push({
             id: ministryIdCounter++,
-            date: new Date().toISOString().split('T')[0], // 實體會議情境：預設帶入今天日期，方便快速新增
+            date: new Date().toISOString().split('T')[0],
             content: ''
         });
         event.showSub = true;
@@ -123,14 +115,14 @@ function updateMinistryItem(eventId, minId, field, value) {
 }
 
 // ====================
-// 講道資訊相關功能 (當天)
+// 講道資訊相關功能
 // ====================
 function addSermon(eventId, type) {
     const event = events.find(e => e.id === eventId);
     if (event) {
         event.sermons.push({
             id: sermonIdCounter++,
-            type: type, // 台語/聯合 或 華語
+            type: type, 
             title: '',
             speaker: '',
             scripture: '',
@@ -166,53 +158,60 @@ function updateSermon(eventId, sermonId, field, value) {
 }
 
 // ====================
-// 日期區間搜尋功能
+// 核心：取得「過濾後」的資料
 // ====================
-function filterEvents() {
-    const start = document.getElementById('searchStartDate').value;
-    const end = document.getElementById('searchEndDate').value;
+function getFilteredEvents() {
+    const startInput = document.getElementById('searchStartDate');
+    const endInput = document.getElementById('searchEndDate');
+    
+    // 如果畫面還沒載入或是沒有輸入值，回傳全部
+    if (!startInput || !endInput) return events;
+    
+    const start = startInput.value;
+    const end = endInput.value;
+    
+    if (!start && !end) return events;
 
-    if (!start && !end) {
-        alert('請至少選擇一個日期進行查詢');
-        return;
-    }
-
-    const filtered = events.filter(event => {
+    return events.filter(event => {
         const eventDate = event.date;
-        
-        if (start && end) {
-            return eventDate >= start && eventDate <= end;
-        } else if (start) {
-            return eventDate >= start;
-        } else if (end) {
-            return eventDate <= end;
-        }
+        if (start && end) return eventDate >= start && eventDate <= end;
+        if (start) return eventDate >= start;
+        if (end) return eventDate <= end;
         return true;
     });
+}
 
-    renderEvents(filtered);
+function filterEvents() {
+    renderEvents(); // 重新渲染就會自動讀取過濾條件
 }
 
 function clearFilter() {
     document.getElementById('searchStartDate').value = '';
     document.getElementById('searchEndDate').value = '';
-    renderEvents(events);
+    renderEvents();
 }
 
 // ====================
-// 渲染所有聚會 (加入 dataToRender 參數支援搜尋)
+// 渲染所有聚會 (永遠透過 getFilteredEvents 抓資料)
 // ====================
-function renderEvents(dataToRender = events) {
+function renderEvents() {
     const container = document.getElementById('eventList');
     container.innerHTML = '';
 
+    // 自動取得當前過濾後的資料
+    const dataToRender = getFilteredEvents();
+
     if (dataToRender.length === 0) {
-        container.innerHTML = '<p class="loading">找不到符合條件的聚會資料</p>';
+        const hasSearch = document.getElementById('searchStartDate')?.value || document.getElementById('searchEndDate')?.value;
+        if (hasSearch) {
+            container.innerHTML = '<p class="loading">找不到符合此日期區間的聚會資料</p>';
+        } else {
+            container.innerHTML = '<p class="loading">尚無聚會資料，請點擊「新增聚會」開始建立</p>';
+        }
         return;
     }
 
     dataToRender.forEach(event => {
-        // 防呆：確保舊資料也有這兩個陣列
         const ministryItems = event.ministryItems || [];
         const sermons = event.sermons || [];
 
@@ -331,7 +330,6 @@ function renderEvents(dataToRender = events) {
     });
 }
 
-// 本地儲存
 function saveToLocalStorage() {
     localStorage.setItem('churchEvents', JSON.stringify(events));
 }
@@ -340,23 +338,26 @@ function loadFromLocalStorage() {
     const saved = localStorage.getItem('churchEvents');
     if (saved) {
         events = JSON.parse(saved);
-        eventIdCounter = Math.max(...events.map(e => e.id), 0) + 1;
-        
-        // 資料庫結構遷移防呆
-        events.forEach(e => {
-            if (!e.ministryItems) e.ministryItems = [];
-            if (!e.sermons) e.sermons = [];
-        });
-
-        const allMinIds = events.flatMap(e => e.ministryItems.map(m => m.id));
-        ministryIdCounter = Math.max(...allMinIds, 0) + 1;
-        
-        const allSermonIds = events.flatMap(e => e.sermons.map(s => s.id));
-        sermonIdCounter = Math.max(...allSermonIds, 0) + 1;
+        recalculateCounters();
     }
 }
 
-// 匯出 Excel (適應新結構，並反映日期欄位)
+// 獨立拉出的計數器計算函式，避免重複程式碼
+function recalculateCounters() {
+    eventIdCounter = Math.max(...events.map(e => e.id), 0) + 1;
+    
+    events.forEach(e => {
+        if (!e.ministryItems) e.ministryItems = [];
+        if (!e.sermons) e.sermons = [];
+    });
+
+    const allMinIds = events.flatMap(e => e.ministryItems.map(m => m.id));
+    ministryIdCounter = Math.max(...allMinIds, 0) + 1;
+    
+    const allSermonIds = events.flatMap(e => e.sermons.map(s => s.id));
+    sermonIdCounter = Math.max(...allSermonIds, 0) + 1;
+}
+
 function exportToExcel() {
     if (events.length === 0) {
         alert('沒有資料可以匯出');
@@ -397,7 +398,6 @@ function exportToExcel() {
     document.body.removeChild(link);
 }
 
-// 儲存到 GAS
 async function saveToGAS() {
     if (!GAS_URL || GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
         alert('請先設定 GAS_URL');
@@ -414,7 +414,6 @@ async function saveToGAS() {
     try {
         const response = await fetch(GAS_URL, {
             method: 'POST',
-            // 已經將 mode: 'no-cors' 移除，才能正常顯示錯誤訊息
             headers: {
                 'Content-Type': 'text/plain;charset=utf-8', 
             },
@@ -442,7 +441,6 @@ async function saveToGAS() {
     }
 }
 
-// 從 GAS 載入
 async function loadFromGAS() {
     if (!GAS_URL || GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
         alert('請先設定 GAS_URL');
@@ -461,10 +459,11 @@ async function loadFromGAS() {
         const data = await response.json();
         if (data.success && data.events) {
             events = data.events;
-            loadFromLocalStorage(); // 重新計算 Counter 確保正確
+            // [重大修復]: 不要呼叫 loadFromLocalStorage，否則雲端資料會被本地舊資料蓋掉
+            recalculateCounters(); 
             renderEvents();
-            saveToLocalStorage();
-            alert('資料已從雲端載入！');
+            saveToLocalStorage(); // 把雲端熱騰騰的資料存進瀏覽器記憶體
+            alert('✅ 資料已從雲端載入！');
         }
     } catch (error) {
         console.error('載入失敗:', error);
@@ -604,7 +603,6 @@ function confirmBatchAdd() {
 // === AI 批量匯入講道功能 ===
 let parsedAiData = [];
 
-// 根據選取的講道類別更新 AI 提示詞
 function updateAiPrompt() {
     const category = document.getElementById('aiCategory').value;
     const promptEl = document.getElementById('aiPrompt');
@@ -632,8 +630,8 @@ function updateAiPrompt() {
 
 function openAiImportModal() {
     document.getElementById('aiImportModal').classList.remove('hidden');
-    document.getElementById('aiCategory').value = '台語/聯合'; // 預設類別
-    updateAiPrompt(); // 初始化提示詞
+    document.getElementById('aiCategory').value = '台語/聯合';
+    updateAiPrompt(); 
     document.getElementById('aiRawText').value = '';
     document.getElementById('aiPreview').innerHTML = '請輸入文字並點擊「開始解析」';
     document.getElementById('aiPreview').classList.remove('has-dates');
@@ -645,7 +643,6 @@ function closeAiImportModal() {
     document.getElementById('aiImportModal').classList.add('hidden');
 }
 
-// 統整背景點擊關閉視窗邏輯
 function closeModalOnBackdrop(event) {
     if (event.target.id === 'batchModal') {
         closeBatchModal();
@@ -656,7 +653,6 @@ function closeModalOnBackdrop(event) {
     }
 }
 
-// 傳送資料給後端進行 AI 解析
 async function processAiText() {
     if (!GAS_URL || GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
         alert('請先設定 GAS_URL');
@@ -726,11 +722,9 @@ async function processAiText() {
     }
 }
 
-// 寫入行事曆
 function confirmAiImport() {
     if (parsedAiData.length === 0) return;
 
-    // 取得使用者在 AI 視窗選擇的語言類別
     const selectedLanguage = document.getElementById('aiCategory').value;
     let addedCount = 0;
 
@@ -738,11 +732,10 @@ function confirmAiImport() {
         let targetEvent = events.find(e => e.date === aiItem.date);
         
         let finalEventName = '主日崇拜';
-        let eventCategory = '台華語聚會'; // 預設為台華語聚會
+        let eventCategory = '台華語聚會'; 
 
         if (aiItem.eventName) {
             finalEventName += ` (${aiItem.eventName})`;
-            // 智慧判斷：如果名稱有聯合，自動切換為聯合聚會
             if (aiItem.eventName.includes('聯合')) {
                 eventCategory = '聯合聚會';
             }
@@ -769,10 +762,9 @@ function confirmAiImport() {
             }
         }
 
-        // 寫入為「講道」資料 (放入 sermons 陣列)
         targetEvent.sermons.push({
             id: sermonIdCounter++,
-            type: selectedLanguage, // 台語/聯合 或 華語
+            type: selectedLanguage, 
             title: aiItem.title || '',
             speaker: aiItem.speaker || '',
             scripture: aiItem.scripture || '',
