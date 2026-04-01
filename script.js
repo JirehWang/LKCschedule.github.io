@@ -166,18 +166,52 @@ function updateSermon(eventId, sermonId, field, value) {
 }
 
 // ====================
-// 渲染所有聚會
+// 日期區間搜尋功能
 // ====================
-function renderEvents() {
-    const container = document.getElementById('eventList');
-    container.innerHTML = '';
+function filterEvents() {
+    const start = document.getElementById('searchStartDate').value;
+    const end = document.getElementById('searchEndDate').value;
 
-    if (events.length === 0) {
-        container.innerHTML = '<p class="loading">尚無聚會資料，請點擊「新增聚會」開始建立</p>';
+    if (!start && !end) {
+        alert('請至少選擇一個日期進行查詢');
         return;
     }
 
-    events.forEach(event => {
+    const filtered = events.filter(event => {
+        const eventDate = event.date;
+        
+        if (start && end) {
+            return eventDate >= start && eventDate <= end;
+        } else if (start) {
+            return eventDate >= start;
+        } else if (end) {
+            return eventDate <= end;
+        }
+        return true;
+    });
+
+    renderEvents(filtered);
+}
+
+function clearFilter() {
+    document.getElementById('searchStartDate').value = '';
+    document.getElementById('searchEndDate').value = '';
+    renderEvents(events);
+}
+
+// ====================
+// 渲染所有聚會 (加入 dataToRender 參數支援搜尋)
+// ====================
+function renderEvents(dataToRender = events) {
+    const container = document.getElementById('eventList');
+    container.innerHTML = '';
+
+    if (dataToRender.length === 0) {
+        container.innerHTML = '<p class="loading">找不到符合條件的聚會資料</p>';
+        return;
+    }
+
+    dataToRender.forEach(event => {
         // 防呆：確保舊資料也有這兩個陣列
         const ministryItems = event.ministryItems || [];
         const sermons = event.sermons || [];
@@ -380,19 +414,26 @@ async function saveToGAS() {
     try {
         const response = await fetch(GAS_URL, {
             method: 'POST',
-            mode: 'no-cors',
+            // 已經將 mode: 'no-cors' 移除，才能正常顯示錯誤訊息
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'text/plain;charset=utf-8', 
             },
             body: JSON.stringify({
                 action: 'save',
                 data: events
             })
         });
-        alert('資料已儲存到雲端！');
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ 資料已成功儲存到雲端！');
+        } else {
+            throw new Error(result.error || '後端回傳失敗');
+        }
     } catch (error) {
-        console.error('儲存失敗:', error);
-        alert('儲存失敗，請檢查網路連線');
+        console.error('儲存失敗細節:', error);
+        alert(`❌ 儲存失敗！\n原因: ${error.message}\n請確認 GAS 是否已部署為「新版本」。`);
     } finally {
         saveBtn.innerHTML = originalText;
         saveBtn.disabled = false;
@@ -638,7 +679,6 @@ async function processAiText() {
     try {
         const response = await fetch(GAS_URL, {
             method: 'POST',
-            // 注意：這裡不加 mode: 'no-cors'，因為我們需要讀取回傳的 JSON
             headers: {
                 'Content-Type': 'text/plain;charset=utf-8', 
             },
