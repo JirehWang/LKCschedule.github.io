@@ -18,7 +18,20 @@
             <button class="btn btn-primary" onclick="saveToGAS()">💾 儲存到雲端</button>
             <button class="btn btn-primary" onclick="loadFromGAS()">📥 從雲端載入</button>
         </div>
-
+<div class="search-bar" style="background: #edf2f7; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+    <div class="input-group" style="margin-bottom: 0;">
+        <label>開始日期</label>
+        <input type="date" id="searchStartDate">
+    </div>
+    <div class="input-group" style="margin-bottom: 0;">
+        <label>結束日期</label>
+        <input type="date" id="searchEndDate">
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <button class="btn btn-primary" onclick="filterEvents()">🔍 查詢</button>
+        <button class="btn" style="background: #718096; color: white;" onclick="clearFilter()">重設</button>
+    </div>
+</div>
         <div id="eventList" class="event-list"></div>
     </div>
 
