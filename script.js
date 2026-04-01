@@ -307,6 +307,10 @@ function clearFilter() {
 // ====================
 // 渲染所有聚會 (永遠透過 getFilteredEvents 抓資料)
 // ====================
+// ====================
+// 渲染所有聚會 (永遠透過 getFilteredEvents 抓資料)
+// 包含拖曳 (Drag & Drop) 與手動上下按鈕功能
+// ====================
 function renderEvents() {
     const container = document.getElementById('eventList');
     container.innerHTML = '';
@@ -329,8 +333,21 @@ function renderEvents() {
 
         const card = document.createElement('div');
         card.className = 'event-card';
+        
+        // --- 綁定拖曳相關事件 ---
+        card.setAttribute('draggable', 'true');
+        card.setAttribute('ondragstart', `handleDragStart(event, ${event.id})`);
+        card.setAttribute('ondragover', `handleDragOver(event)`);
+        card.setAttribute('ondragleave', `handleDragLeave(event)`);
+        card.setAttribute('ondrop', `handleDrop(event, ${event.id})`);
+
         card.innerHTML = `
             <div class="event-header" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
+                
+                <div style="cursor: grab; font-size: 20px; color: #a0aec0; padding-right: 5px; padding-bottom: 5px; display: flex; align-items: center;" title="按住拖曳以調整順序">
+                    ☰
+                </div>
+
                 <div class="input-group" style="margin-bottom: 0;">
                     <label>日期</label>
                     <input type="date" value="${event.date}" 
@@ -446,7 +463,6 @@ function renderEvents() {
         container.appendChild(card);
     });
 }
-
 function saveToLocalStorage() {
     localStorage.setItem('churchEvents', JSON.stringify(events));
 }
