@@ -46,7 +46,7 @@ function confirmSingleEventAdd() {
     };
     
     events.push(event);
-    events.sort((a, b) => new Date(a.date) - new Date(b.date));
+    sortEvents(); // 新增後自動排序
     
     renderEvents();
     saveToLocalStorage();
@@ -61,10 +61,16 @@ function deleteEvent(eventId) {
     }
 }
 
+// 更新聚會資料 (加入自動排序邏輯)
 function updateEvent(eventId, field, value) {
     const event = events.find(e => e.id === eventId);
     if (event) {
         event[field] = value;
+        // 如果改的是日期，就觸發重新排序與渲染
+        if (field === 'date') {
+            sortEvents();
+            renderEvents();
+        }
         saveToLocalStorage();
     }
 }
@@ -73,7 +79,51 @@ function toggleSubItems(eventId) {
     const event = events.find(e => e.id === eventId);
     if (event) {
         event.showSub = !event.showSub;
-        renderEvents(); // 現在呼叫 renderEvents 會自動維持搜尋狀態
+        renderEvents(); 
+    }
+}
+
+// ====================
+// 排序與手動調整順序功能
+// ====================
+function sortEvents() {
+    // 依據日期由舊到新排序 (Stable Sort，若日期相同則維持目前的手動順序)
+    events.sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+function moveEventUp(eventId) {
+    const index = events.findIndex(e => e.id === eventId);
+    if (index > 0) {
+        // 限制只能與「相同日期」的聚會交換順序
+        if (events[index].date !== events[index - 1].date) {
+            alert('💡 只能與「相同日期」的聚會互相調整順序喔！\n若要跨日移動，請直接修改日期欄位。');
+            return;
+        }
+        // 陣列元素交換
+        const temp = events[index];
+        events[index] = events[index - 1];
+        events[index - 1] = temp;
+        
+        saveToLocalStorage();
+        renderEvents();
+    }
+}
+
+function moveEventDown(eventId) {
+    const index = events.findIndex(e => e.id === eventId);
+    if (index < events.length - 1) {
+        // 限制只能與「相同日期」的聚會交換順序
+        if (events[index].date !== events[index + 1].date) {
+            alert('💡 只能與「相同日期」的聚會互相調整順序喔！\n若要跨日移動，請直接修改日期欄位。');
+            return;
+        }
+        // 陣列元素交換
+        const temp = events[index];
+        events[index] = events[index + 1];
+        events[index + 1] = temp;
+        
+        saveToLocalStorage();
+        renderEvents();
     }
 }
 
@@ -164,7 +214,6 @@ function getFilteredEvents() {
     const startInput = document.getElementById('searchStartDate');
     const endInput = document.getElementById('searchEndDate');
     
-    // 如果畫面還沒載入或是沒有輸入值，回傳全部
     if (!startInput || !endInput) return events;
     
     const start = startInput.value;
@@ -182,7 +231,7 @@ function getFilteredEvents() {
 }
 
 function filterEvents() {
-    renderEvents(); // 重新渲染就會自動讀取過濾條件
+    renderEvents(); 
 }
 
 function clearFilter() {
@@ -198,7 +247,6 @@ function renderEvents() {
     const container = document.getElementById('eventList');
     container.innerHTML = '';
 
-    // 自動取得當前過濾後的資料
     const dataToRender = getFilteredEvents();
 
     if (dataToRender.length === 0) {
@@ -218,28 +266,33 @@ function renderEvents() {
         const card = document.createElement('div');
         card.className = 'event-card';
         card.innerHTML = `
-            <div class="event-header">
-                <div class="input-group">
+            <div class="event-header" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
+                <div class="input-group" style="margin-bottom: 0;">
                     <label>日期</label>
                     <input type="date" value="${event.date}" 
                            onchange="updateEvent(${event.id}, 'date', this.value)">
                 </div>
-                <div class="input-group">
+                <div class="input-group" style="margin-bottom: 0;">
                     <label>聚會名稱</label>
                     <input type="text" placeholder="輸入聚會名稱" value="${event.name}"
                            onchange="updateEvent(${event.id}, 'name', this.value)">
                 </div>
-                <div class="input-group">
+                <div class="input-group" style="margin-bottom: 0;">
                     <label>聚會類別</label>
                     <select onchange="updateEvent(${event.id}, 'category', this.value)">
                         <option ${event.category === '台華語聚會' ? 'selected' : ''}>台華語聚會</option>
                         <option ${event.category === '聯合聚會' ? 'selected' : ''}>聯合聚會</option>
                     </select>
                 </div>
-                <button class="btn btn-danger btn-small" onclick="deleteEvent(${event.id})">刪除</button>
+                
+                <div style="display: flex; gap: 8px; margin-left: auto;">
+                    <button class="btn btn-small" style="padding: 4px 10px; background: #e2e8f0; color: #2d3748; border: 1px solid #cbd5e0;" onclick="moveEventUp(${event.id})" title="與同日期的聚會對調(上移)">⬆️</button>
+                    <button class="btn btn-small" style="padding: 4px 10px; background: #e2e8f0; color: #2d3748; border: 1px solid #cbd5e0;" onclick="moveEventDown(${event.id})" title="與同日期的聚會對調(下移)">⬇️</button>
+                    <button class="btn btn-danger btn-small" onclick="deleteEvent(${event.id})">刪除</button>
+                </div>
             </div>
             
-            <button class="btn toggle-sub btn-small" onclick="toggleSubItems(${event.id})">
+            <button class="btn toggle-sub btn-small" onclick="toggleSubItems(${event.id})" style="margin-top: 15px;">
                 ${event.showSub ? '▼' : '▶'} 聚會詳情 (事工:${ministryItems.length} / 講道:${sermons.length})
             </button>
             
@@ -338,11 +391,11 @@ function loadFromLocalStorage() {
     const saved = localStorage.getItem('churchEvents');
     if (saved) {
         events = JSON.parse(saved);
+        sortEvents(); // 載入時確保排序正確
         recalculateCounters();
     }
 }
 
-// 獨立拉出的計數器計算函式，避免重複程式碼
 function recalculateCounters() {
     eventIdCounter = Math.max(...events.map(e => e.id), 0) + 1;
     
@@ -459,10 +512,10 @@ async function loadFromGAS() {
         const data = await response.json();
         if (data.success && data.events) {
             events = data.events;
-            // [重大修復]: 不要呼叫 loadFromLocalStorage，否則雲端資料會被本地舊資料蓋掉
+            sortEvents(); // 從雲端載入後確保排序正確
             recalculateCounters(); 
             renderEvents();
-            saveToLocalStorage(); // 把雲端熱騰騰的資料存進瀏覽器記憶體
+            saveToLocalStorage(); 
             alert('✅ 資料已從雲端載入！');
         }
     } catch (error) {
@@ -592,7 +645,7 @@ function confirmBatchAdd() {
         }
     });
     
-    events.sort((a, b) => new Date(a.date) - new Date(b.date));
+    sortEvents();
     renderEvents();
     saveToLocalStorage();
     closeBatchModal();
@@ -777,7 +830,7 @@ function confirmAiImport() {
         addedCount++;
     });
 
-    events.sort((a, b) => new Date(a.date) - new Date(b.date));
+    sortEvents();
     renderEvents();
     saveToLocalStorage();
     closeAiImportModal();
