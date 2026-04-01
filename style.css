@@ -372,3 +372,14 @@ textarea:focus {
         min-width: 40px;
     }
 }
+
+/* 拖曳狀態的視覺回饋 */
+.event-card.dragging {
+    opacity: 0.5;
+    border: 2px dashed #4299e1;
+    transform: scale(0.98);
+}
+.event-card.drag-over {
+    border-top: 4px solid #4299e1;
+    transition: all 0.2s ease;
+}
