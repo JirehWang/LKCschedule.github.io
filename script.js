@@ -126,7 +126,71 @@ function moveEventDown(eventId) {
         renderEvents();
     }
 }
+// ====================
+// 拖曳排序功能變數與邏輯
+// ====================
+let draggedEventId = null;
 
+function handleDragStart(e, eventId) {
+    draggedEventId = eventId;
+    // 稍微延遲加上 class，讓拖曳出去的影子保持原樣，但留在原地的卡片變半透明
+    setTimeout(() => e.target.classList.add('dragging'), 0);
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragOver(e) {
+    e.preventDefault(); // 必須 preventDefault 才能允許 drop
+    const card = e.target.closest('.event-card');
+    if (card && !card.classList.contains('dragging')) {
+        card.classList.add('drag-over');
+    }
+}
+
+function handleDragLeave(e) {
+    const card = e.target.closest('.event-card');
+    if (card) {
+        card.classList.remove('drag-over');
+    }
+}
+
+function handleDrop(e, targetEventId) {
+    e.preventDefault();
+    
+    // 清除所有視覺效果
+    document.querySelectorAll('.event-card').forEach(c => {
+        c.classList.remove('dragging');
+        c.classList.remove('drag-over');
+    });
+
+    if (!draggedEventId || draggedEventId === targetEventId) return;
+
+    const draggedIndex = events.findIndex(ev => ev.id === draggedEventId);
+    const targetIndex = events.findIndex(ev => ev.id === targetEventId);
+
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    // 防呆：檢查是否為同一天
+    if (events[draggedIndex].date !== events[targetIndex].date) {
+        alert('💡 只能與「相同日期」的聚會互相調整順序喔！\n若要跨日移動，請直接修改日期欄位。');
+        return;
+    }
+
+    // 執行陣列重新排列 (計算相對位置)
+    const targetItem = events[targetIndex];
+    const [draggedItem] = events.splice(draggedIndex, 1);
+    const newTargetIndex = events.indexOf(targetItem);
+    
+    // 判斷是往下拖還是往上拖，決定插入在目標的前面還是後面
+    if (draggedIndex < targetIndex) {
+        events.splice(newTargetIndex + 1, 0, draggedItem);
+    } else {
+        events.splice(newTargetIndex, 0, draggedItem);
+    }
+    
+    saveToLocalStorage();
+    renderEvents();
+    draggedEventId = null;
+}
 // ====================
 // 事工細項相關功能
 // ====================
