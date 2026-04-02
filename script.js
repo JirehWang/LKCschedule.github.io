@@ -4,14 +4,62 @@ let eventIdCounter = 1;
 let ministryIdCounter = 1; // 事工細項計數器
 let sermonIdCounter = 1;   // 講道資訊計數器
 
-// GAS Web App URL - 請替換成你部署後的 URL
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwiYYWgKxmLRAEaE_pbp_kWyAzlRPcwYVQfvmJVamRJvosvt5wTTkvwebbFBkP8rMqX/exec';
+// ====================
+// 🚀 系統啟動與安全連線
+// ====================
+
+// 🛡️ API 哨兵：確保 config.js 已經準備好
+async function ensureAPIReady() {
+    let retryCount = 0;
+    while (typeof window.churchAPI !== 'function' && retryCount < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100)); 
+        retryCount++;
+    }
+    if (typeof window.churchAPI !== 'function') {
+        throw new Error("安全路由載入逾時，請檢查 config.js。");
+    }
+}
 
 // 初始化
-document.addEventListener('DOMContentLoaded', function() {
-    loadFromLocalStorage();
-    renderEvents();
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        // 第一時間顯示載入中
+        showLoading("🚀 正在啟動行事曆系統...");
+        
+        // 等待路由就緒
+        await ensureAPIReady();
+        
+        loadFromLocalStorage();
+        renderEvents();
+        console.log("✅ 行事曆系統安全啟動");
+    } catch (e) {
+        alert("系統啟動失敗：" + e.message);
+    } finally {
+        hideLoading();
+    }
 });
+
+// 核心連線函式 (透過中央路由，完美隱藏真實 URL 與 Token)
+async function callCloudAPI(action, data = {}) {
+    if (typeof window.churchAPI !== 'function') throw new Error("API 尚未就緒");
+    return await window.churchAPI(action, data);
+}
+
+// --- Loading 控制 ---
+function showLoading(msg = "處理中...") {
+    const textEl = document.getElementById('overlay-text');
+    const overlayEl = document.getElementById('loading-overlay');
+    if (textEl) textEl.innerText = msg;
+    if (overlayEl) overlayEl.style.display = 'flex';
+}
+function hideLoading() {
+    const overlayEl = document.getElementById('loading-overlay');
+    if (overlayEl) overlayEl.style.display = 'none';
+}
+
+// ====================
+// 聚會新增與基本管理
+// ====================
 
 // 新增單一對話框的專屬邏輯
 function addEvent() {
@@ -126,6 +174,7 @@ function moveEventDown(eventId) {
         renderEvents();
     }
 }
+
 // ====================
 // 拖曳排序功能變數與邏輯
 // ====================
@@ -191,6 +240,7 @@ function handleDrop(e, targetEventId) {
     renderEvents();
     draggedEventId = null;
 }
+
 // ====================
 // 事工細項相關功能
 // ====================
@@ -305,14 +355,11 @@ function clearFilter() {
 }
 
 // ====================
-// 渲染所有聚會 (永遠透過 getFilteredEvents 抓資料)
-// ====================
-// ====================
-// 渲染所有聚會 (永遠透過 getFilteredEvents 抓資料)
-// 包含拖曳 (Drag & Drop) 與手動上下按鈕功能
+// 渲染所有聚會
 // ====================
 function renderEvents() {
     const container = document.getElementById('eventList');
+    if (!container) return;
     container.innerHTML = '';
 
     const dataToRender = getFilteredEvents();
@@ -463,6 +510,11 @@ function renderEvents() {
         container.appendChild(card);
     });
 }
+
+// ====================
+// 儲存與匯出功能
+// ====================
+
 function saveToLocalStorage() {
     localStorage.setItem('churchEvents', JSON.stringify(events));
 }
@@ -531,32 +583,18 @@ function exportToExcel() {
     document.body.removeChild(link);
 }
 
-async function saveToGAS() {
-    if (!GAS_URL || GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
-        alert('請先設定 GAS_URL');
-        return;
-    }
+// ====================
+// 🌟 雲端同步 (使用中央路由)
+// ====================
 
+async function saveToGAS() {
     const saveBtn = document.querySelector('button[onclick="saveToGAS()"]');
     const originalText = saveBtn.innerHTML;
     saveBtn.innerHTML = '⏳ 儲存中...';
     saveBtn.disabled = true;
-    saveBtn.style.opacity = '0.7';
-    saveBtn.style.cursor = 'not-allowed';
 
     try {
-        const response = await fetch(GAS_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8', 
-            },
-            body: JSON.stringify({
-                action: 'save',
-                data: events
-            })
-        });
-        
-        const result = await response.json();
+        const result = await callCloudAPI('save', events);
         
         if (result.success) {
             alert('✅ 資料已成功儲存到雲端！');
@@ -565,31 +603,23 @@ async function saveToGAS() {
         }
     } catch (error) {
         console.error('儲存失敗細節:', error);
-        alert(`❌ 儲存失敗！\n原因: ${error.message}\n請確認 GAS 是否已部署為「新版本」。`);
+        alert(`❌ 儲存失敗！\n原因: ${error.message}`);
     } finally {
         saveBtn.innerHTML = originalText;
         saveBtn.disabled = false;
-        saveBtn.style.opacity = '1';
-        saveBtn.style.cursor = 'pointer';
     }
 }
 
 async function loadFromGAS() {
-    if (!GAS_URL || GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
-        alert('請先設定 GAS_URL');
-        return;
-    }
-
     const loadBtn = document.querySelector('button[onclick="loadFromGAS()"]');
     const originalText = loadBtn.innerHTML;
     loadBtn.innerHTML = '⏳ 載入中...';
     loadBtn.disabled = true;
-    loadBtn.style.opacity = '0.7';
-    loadBtn.style.cursor = 'not-allowed';
 
     try {
-        const response = await fetch(`${GAS_URL}?action=load`);
-        const data = await response.json();
+        // 🌟 改用 POST 方式讀取，完美避開 GET 跨網域問題
+        const data = await callCloudAPI('load');
+        
         if (data.success && data.events) {
             events = data.events;
             sortEvents(); // 從雲端載入後確保排序正確
@@ -604,12 +634,12 @@ async function loadFromGAS() {
     } finally {
         loadBtn.innerHTML = originalText;
         loadBtn.disabled = false;
-        loadBtn.style.opacity = '1';
-        loadBtn.style.cursor = 'pointer';
     }
 }
 
-// === 批量新增功能 ===
+// ====================
+// 批量新增功能
+// ====================
 let selectedWeekdays = new Set();
 let previewDates = [];
 
@@ -649,15 +679,8 @@ function previewBatchDates() {
     const startDate = document.getElementById('batchStartDate').value;
     const endDate = document.getElementById('batchEndDate').value;
     
-    if (!startDate || !endDate) {
-        alert('請選擇開始和結束日期');
-        return;
-    }
-    
-    if (selectedWeekdays.size === 0) {
-        alert('請至少選擇一個星期');
-        return;
-    }
+    if (!startDate || !endDate) return;
+    if (selectedWeekdays.size === 0) return;
     
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -733,7 +756,9 @@ function confirmBatchAdd() {
     alert(`成功新增 ${addedCount} 個聚會！${previewDates.length - addedCount > 0 ? '\n(' + (previewDates.length - addedCount) + ' 個重複的聚會已略過)' : ''}`);
 }
 
-// === AI 批量匯入講道功能 ===
+// ====================
+// 🤖 AI 批量匯入講道功能
+// ====================
 let parsedAiData = [];
 
 function updateAiPrompt() {
@@ -787,11 +812,6 @@ function closeModalOnBackdrop(event) {
 }
 
 async function processAiText() {
-    if (!GAS_URL || GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
-        alert('請先設定 GAS_URL');
-        return;
-    }
-
     const rawText = document.getElementById('aiRawText').value.trim();
     const prompt = document.getElementById('aiPrompt').value.trim();
     const previewDiv = document.getElementById('aiPreview');
@@ -806,19 +826,8 @@ async function processAiText() {
     confirmBtn.disabled = true;
 
     try {
-        const response = await fetch(GAS_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8', 
-            },
-            body: JSON.stringify({
-                action: 'ai_parse',
-                prompt: prompt,
-                rawText: rawText
-            })
-        });
-
-        const data = await response.json();
+        // 🌟 改用中央路由發送 AI 解析請求
+        const data = await callCloudAPI('ai_parse', { prompt: prompt, rawText: rawText });
 
         if (data.success) {
             parsedAiData = JSON.parse(data.result);
